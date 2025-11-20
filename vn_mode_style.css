@@ -1,7 +1,18 @@
-/* VN Mode Style - v4.5 (Export/Import Added) */
+/* VN Mode Style - v4.8 (Updated with Sprite Sliders) */
 
-/* 동글동글한 폰트 로드 */
-@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+/* 폰트 로드 */
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR&display=swap');
+
+:root {
+    /* 스프라이트 기본 변수 정의 */
+    --vn-user-scale: 1;
+    --vn-user-x: 0px;
+    --vn-user-y: 0px;
+    
+    --vn-char-scale: 1;
+    --vn-char-x: 0px;
+    --vn-char-y: 0px;
+}
 
 #vn-overlay {
     position: fixed;
@@ -15,150 +26,249 @@
     pointer-events: none; 
 }
 
-/* ★ 설정 버튼 영역 */
+/* ==========================================================================
+   [1] 좌측 상단 컨트롤
+   ========================================================================== */
 #vn-settings-area {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 50;
-    pointer-events: auto;
-    /* display: none;  <-- 이 줄을 삭제하거나 주석 처리 */
-    display: block; /* 확실하게 보이도록 추가 */
+    position: absolute; top: 20px; left: 20px; z-index: 50;
+    pointer-events: auto; display: flex; gap: 10px;     
+}
+.vn-top-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 12px; border-radius: 18px;
+    font-size: 0.9em; font-weight: bold; cursor: pointer;
+    transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    border: 1px solid transparent; color: white;
+    height: 36px; box-sizing: border-box;
+}
+.vn-top-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.25); }
+#vn-user-sprite-toggle.on { background-color: #4CAF50; border-color: #38703C; }
+#vn-user-sprite-toggle.off { background-color: #FF9800; border-color: #B36B00; }
+#vn-bgm-toggle-btn { background-color: #9C27B0; border-color: #7B1FA2; }
+#vn-bgm-toggle-btn.playing { background-color: #E91E63; animation: pulse-border 2s infinite; }
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(233, 30, 99, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(233, 30, 99, 0); }
 }
 
-#vn-user-sprite-toggle {
-    display: inline-block;
-    padding: 8px 12px;
-    border-radius: 18px;
-    font-size: 0.9em;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    border: 1px solid transparent;
+/* [2] BGM 패널 */
+#vn-bgm-panel {
+    display: none; position: absolute; top: 65px; left: 20px; width: 320px;
+    background: rgba(255, 255, 255, 0.98); border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.3); padding: 15px;
+    z-index: 95; pointer-events: auto; border: 2px solid #9C27B0; color: #333; text-align: left;
+    max-height: 80vh; overflow-y: auto;
 }
+#vn-bgm-panel::-webkit-scrollbar { width: 6px; }
+#vn-bgm-panel::-webkit-scrollbar-thumb { background-color: #CE93D8; border-radius: 10px; }
+#vn-bgm-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;
+}
+#vn-bgm-header h4 { margin: 0; color: #9C27B0; font-size: 1.1em; }
+.vn-player-controls {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    background: #f3e5f5; padding: 10px; border-radius: 10px;
+}
+.vn-bgm-sub-controls {
+    display: flex; justify-content: center; gap: 15px;
+    margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px dashed #e1bee7;
+}
+.vn-sub-ctrl-btn {
+    background: none; border: none; cursor: pointer; 
+    color: #9C27B0; font-size: 1.1em; transition: all 0.2s;
+    width: 30px; height: 30px; border-radius: 50%;
+}
+.vn-sub-ctrl-btn:hover { background-color: #f3e5f5; transform: scale(1.1); }
+.vn-sub-ctrl-btn.active { color: #E91E63; font-weight: bold; text-shadow: 0 0 5px rgba(233,30,99,0.3); }
+#vn-bgm-list {
+    list-style: none; padding: 0; margin: 0 0 10px 0;
+    max-height: 120px; overflow-y: auto; border: 1px solid #eee; border-radius: 5px;
+}
+#vn-bgm-list li {
+    padding: 6px 8px; border-bottom: 1px solid #eee; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; font-size: 0.85em;
+}
+.vn-bgm-preset-area { margin-top: 15px; padding-top: 10px; border-top: 2px dashed #E1BEE7; }
+.vn-bgm-preset-area h5 { margin: 0 0 8px 0; color: #7B1FA2; font-size: 0.95em; }
+.vn-preset-row { display: flex; gap: 5px; margin-bottom: 5px; }
+#vn-bgm-preset-select { flex-grow: 1; padding: 5px; border: 1px solid #CE93D8; border-radius: 4px; font-size: 0.85em; }
+.vn-small-btn {
+    border: none; border-radius: 4px; cursor: pointer; color: white; font-size: 0.8em; padding: 5px 8px; transition: 0.2s;
+}
+.btn-load { background: #9C27B0; } .btn-load:hover { background: #7B1FA2; }
+.btn-save { background: #4CAF50; } .btn-save:hover { background: #388E3C; }
+.btn-del { background: #F44336; }  .btn-del:hover { background: #D32F2F; }
+.btn-exp { background: #607D8B; }  .btn-exp:hover { background: #455A64; }
+.vn-preset-io-row {
+    display: flex; gap: 5px; margin-top: 8px; background: #F3E5F5; padding: 6px; border-radius: 6px;
+}
+.vn-preset-io-row button { flex: 1; }
+#vn-bgm-list li:hover { background: #f9f9f9; }
+#vn-bgm-list li.active { background: #e1bee7; font-weight: bold; color: #4a148c; }
+.vn-bgm-del-btn { background: none; border: none; color: #aaa; cursor: pointer; }
+.vn-bgm-del-btn:hover { color: #f44336; }
+.vn-bgm-inputs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.vn-bgm-inputs input { 
+    width: 100%; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85em; height: 32px; box-sizing: border-box; 
+}
+#vn-bgm-add-btn { 
+    width: 100%; background: #9C27B0; color: white; border: none; border-radius: 4px; 
+    cursor: pointer; height: 32px; font-size: 0.9em; font-weight: bold; transition: background 0.2s;
+}
+#vn-bgm-add-btn:hover { background: #7B1FA2; }
 
-#vn-user-sprite-toggle.on {
-    background-color: #4CAF50; color: white; border-color: #38703C;
+/* ==========================================================================
+   [3] ★ 테마 설정창 및 슬라이더 추가
+   ========================================================================== */
+#vn-preset-container { 
+    position: absolute; top: 70px; right: 20px; z-index: 90; pointer-events: auto; text-align: right; 
 }
-#vn-user-sprite-toggle.off {
-    background-color: #FF9800; color: white; border-color: #B36B00;
+#vn-preset-toggle-btn { 
+    background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555; padding: 5px 12px; 
+    border-radius: 15px; cursor: pointer; font-size: 0.9em; backdrop-filter: blur(4px); transition: 0.2s; 
 }
-#vn-user-sprite-toggle:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
-}
+#vn-preset-toggle-btn:hover { background: #fff; color: #000; }
 
-/* ★ 배경 레이어 */
+#vn-preset-panel { 
+    display: none; margin-top: 10px; background: rgba(255,255,255,0.98); border-radius: 12px; 
+    padding: 15px; width: 300px; box-shadow: 0 5px 25px rgba(0,0,0,0.4); text-align: left; border: 1px solid #ccc;
+    max-height: 85vh; overflow-y: auto; /* 패널이 길어지면 스크롤 */
+}
+#vn-preset-panel h4 { margin: 0 0 10px 0; font-size: 1em; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+#vn-preset-panel label { display: block; font-size: 0.85em; color: #555; margin-bottom: 4px; }
+#vn-preset-panel select { width: 100%; padding: 5px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd; }
+#vn-preset-panel textarea { 
+    width: 100%; height: 80px; padding: 5px; font-size: 0.8em; font-family: monospace; 
+    border: 1px solid #ddd; resize: vertical; background: #f9f9f9; margin-bottom: 8px; 
+    white-space: pre; overflow-x: auto; 
+}
+.vn-preset-controls { background: #f0f0f0; padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0; margin-bottom: 8px; }
+#vn-new-preset-name { width: 100%; padding: 5px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 3px; font-size: 0.9em; box-sizing: border-box; }
+.vn-btn-row { display: flex; gap: 5px; }
+.vn-btn-row button { flex: 1; padding: 6px 5px; font-size: 0.85em; cursor: pointer; border-radius: 3px; border: none; color: white; transition: 0.2s; }
+#vn-save-custom-btn { background: #4CAF50; }
+#vn-delete-custom-btn { background: #f44336; }
+.vn-panel-actions { margin-top: 10px; text-align: right; border-top: 1px solid #eee; padding-top: 10px; }
+#vn-apply-btn { background: #2196F3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: bold; width: 100%; }
+#vn-apply-btn:hover { background: #1976D2; }
+
+/* [추가] 슬라이더 스타일 */
+.vn-sprite-settings-group {
+    margin-top: 15px; border-top: 2px dashed #E1BEE7; padding-top: 10px;
+}
+.vn-sprite-settings-group h5 { margin: 0 0 10px 0; color: #E91E63; font-size: 0.95em; font-weight: bold; }
+.vn-slider-container { margin-bottom: 12px; }
+.vn-slider-header {
+    display: flex; justify-content: space-between; font-size: 0.8em; color: #666; margin-bottom: 4px;
+}
+.vn-slider-val { font-weight: bold; color: #333; }
+.vn-slider-range {
+    width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; outline: none; -webkit-appearance: none;
+}
+.vn-slider-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; background: #9C27B0; border-radius: 50%; cursor: pointer; transition: transform .1s;
+}
+.vn-slider-range::-webkit-slider-thumb:hover { transform: scale(1.2); background: #7B1FA2; }
+
+
+/* ==========================================================================
+   [4] 메인 대화창 및 캐릭터 (위치 로직 수정)
+   ========================================================================== */
 #vn-background-layer {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 1; 
-    background-color: rgba(0,0,0,0.3); 
-    background-position: center;
-    background-size: cover; 
-    background-repeat: no-repeat;
-    transition: background-image 0.8s ease-in-out; 
-    pointer-events: none;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; 
+    background-color: rgba(0,0,0,0.3); background-position: center; background-size: cover; 
+    background-repeat: no-repeat; transition: background-image 0.8s ease-in-out; pointer-events: none;
 }
-
-/* 캐릭터 레이어 */
-#vn-sprite-layer {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 5;
-    pointer-events: none;
-    overflow: hidden;
-}
+#vn-sprite-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; overflow: hidden; }
 
 .vn-character-sprite {
-    position: absolute;
-    bottom: -20px;
-    max-height: 90vh;
-    max-width: 45vw;
-    height: auto;
-    width: auto;
-    object-fit: contain;
+    position: absolute; bottom: -20px; max-height: 90vh; max-width: 45vw;
+    height: auto; width: auto; object-fit: contain;
     animation: fadeInSprite 0.6s ease-out forwards;
     filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
-    transition: opacity 0.6s, filter 0.4s ease, transform 0.6s ease;
+    transition: opacity 0.6s, filter 0.4s ease, transform 0.1s linear; /* transform 반응 속도 개선 */
+    
+    /* 기본값: 캐릭터 변수 사용 */
+    --curr-scale: var(--vn-char-scale);
+    --curr-x: var(--vn-char-x);
+    --curr-y: var(--vn-char-y);
+}
+
+/* 유저 스프라이트 식별 (JS에서 클래스 추가 필요) */
+.vn-character-sprite.vn-user-sprite {
+    /* 유저 변수로 덮어쓰기 */
+    --curr-scale: var(--vn-user-scale);
+    --curr-x: var(--vn-user-x);
+    --curr-y: var(--vn-user-y);
 }
 
 .vn-character-sprite.dimmed { filter: brightness(60%) grayscale(10%) blur(1px); }
-.vn-character-sprite.left-pos { left: 15%; transform-origin: bottom left; }
-.vn-character-sprite.right-pos { right: 15%; transform-origin: bottom right; }
-.vn-character-sprite.center-pos { left: 50%; transform: translateX(-50%); transform-origin: bottom center; max-width: 55vw; }
 .vn-character-sprite.exiting { animation: fadeOutSprite 0.6s ease-out forwards; }
+
+/* [중요] 위치별 Transform 로직에 변수 적용 */
+/* 왼쪽 정렬 */
+.vn-character-sprite.left-pos { 
+    left: 15%; 
+    transform-origin: bottom left;
+    transform: translate(var(--curr-x), var(--curr-y)) scale(var(--curr-scale));
+}
+/* 오른쪽 정렬 */
+.vn-character-sprite.right-pos { 
+    right: 15%; 
+    transform-origin: bottom right;
+    transform: translate(var(--curr-x), var(--curr-y)) scale(var(--curr-scale));
+}
+/* 중앙 정렬 (기존 translateX(-50%) 유지하며 변수 추가) */
+.vn-character-sprite.center-pos { 
+    left: 50%; 
+    transform-origin: bottom center; 
+    max-width: 55vw; 
+    transform: translateX(calc(-50% + var(--curr-x))) translateY(var(--curr-y)) scale(var(--curr-scale));
+}
 
 @keyframes fadeInSprite { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeOutSprite { from { opacity: 1; } to { opacity: 0; } }
 
-/* ★ 대화창 스타일 */
 #vn-dialog-box {
-    position: absolute; 
-    bottom: 40px; left: 50%;          
-    transform: translateX(-50%); 
-    z-index: 20; 
-    width: 95%; max-width: 1400px; min-height: 250px; 
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
+    z-index: 20; width: 95%; max-width: 1400px; min-height: 250px; 
     background-color: #fffdf2;
-    background-image: radial-gradient(#f3efd8 20%, transparent 20%);
-    background-size: 20px 20px;
-    border: 4px solid #fff; 
-    border-radius: 45px; 
-    padding: 50px 60px 40px 60px; 
+    background-image: radial-gradient(#f3efd8 20%, transparent 20%); background-size: 20px 20px;
+    border: 4px solid #fff; border-radius: 45px; padding: 50px 60px 40px 60px; 
     box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.5) inset, 0 15px 25px rgba(90, 70, 50, 0.15); 
     display: flex; flex-direction: column; pointer-events: auto; 
 }
-
-/* 이름표 스타일 */
 #vn-dialog-box::before {
-    content: 'Talk'; position: absolute;
-    top: -25px; left: 50px;
-    background: #ff4d4d; color: #fff;
-    font-size: 1.3em; padding: 10px 30px;
-    border-radius: 30px;
-    box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
+    content: 'Talk'; position: absolute; top: -25px; left: 50px;
+    background: #ff4d4d; color: #fff; font-size: 1.3em; padding: 10px 30px;
+    border-radius: 30px; box-shadow: 2px 4px 8px rgba(0,0,0,0.2);
     transform: rotate(-3deg); z-index: 25;
 }
-
 #vn-text-content {
-    color: #5e5040; font-size: 1.7em; 
-    line-height: 1.5; white-space: pre-wrap;
-    text-shadow: none; flex-grow: 1;
-    margin-bottom: 10px; overflow-y: auto;
+    color: #5e5040; font-size: 1.7em; line-height: 1.5; white-space: pre-wrap;
+    text-shadow: none; flex-grow: 1; margin-bottom: 10px; overflow-y: auto;
     max-height: 60vh; width: 100%; font-weight: 500;
 }
-
 #vn-text-content::-webkit-scrollbar { width: 6px; }
 #vn-text-content::-webkit-scrollbar-thumb { background-color: rgba(224, 216, 192, 0.5); border-radius: 10px; }
 #vn-text-content::-webkit-scrollbar-track { background-color: transparent; }
 
-/* 입력 영역 */
 #vn-input-area {
-    display: none; width: 100%;
-    border-top: none; padding-top: 0;
-    gap: 15px; margin-top: auto;
-    align-items: center; justify-content: center;
+    display: none; width: 100%; border-top: none; padding-top: 0;
+    gap: 15px; margin-top: auto; align-items: center; justify-content: center;
 }
-
 #vn-user-input {
-    flex-grow: 1; background: #fff4cc; 
-    border: 2px solid #f2d06b; border-radius: 30px; 
-    color: #5e5040; padding: 12px 25px;
-    font-size: 1.3em; resize: none;
+    flex-grow: 1; background: #fff4cc; border: 2px solid #f2d06b; border-radius: 30px; 
+    color: #5e5040; padding: 12px 25px; font-size: 1.3em; resize: none;
     height: 50px; font-family: inherit; pointer-events: auto;
     box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05);
 }
 #vn-user-input:focus { outline: none; border-color: #f2a900; background: #fff; }
-#vn-user-input::placeholder { color: #bcaaa4; }
-
 #vn-send-btn {
-    width: 90px; height: 50px;
-    background: #f2a900; color: #fff;
-    border: none; border-radius: 25px;
-    cursor: pointer; font-weight: bold;
+    width: 90px; height: 50px; background: #f2a900; color: #fff;
+    border: none; border-radius: 25px; cursor: pointer; font-weight: bold;
     transition: all 0.2s; font-size: 1.1em; pointer-events: auto;
     box-shadow: 2px 4px 6px rgba(0,0,0,0.15);
 }
@@ -166,120 +276,85 @@
 
 #vn-indicator {
     position: absolute; bottom: 25px; right: 50px;
-    width: 0; height: 0; 
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-top: 18px solid #f2a900; 
-    animation: float 0.8s infinite ease-in-out;
+    width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent;
+    border-top: 18px solid #f2a900; animation: float 0.8s infinite ease-in-out;
     opacity: 1; pointer-events: none; display: none; 
 }
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(5px); }
-}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
 body.vn-mode-active #sheld, body.vn-mode-active #top-bar, body.vn-mode-active .drawer-toggle {
     opacity: 0; pointer-events: none; transition: opacity 0.4s ease; 
 }
 
 /* 메뉴 버튼 */
-/* 메뉴 버튼 (아이콘 전용 스타일로 변경) */
-/* 메뉴 버튼 (PC/모바일 공통 수정) */
 #vn-toggle-btn {
-    cursor: pointer;
-    font-weight: bold;
-    color: #aaa;
-    margin-left: 10px;
-    border: 1px solid #444;
-    border-radius: 8px;
-    transition: all 0.3s;
+    cursor: pointer; font-weight: bold; color: #aaa; margin-left: 10px;
+    border: 1px solid #444; border-radius: 8px; transition: all 0.3s;
     background: rgba(0, 0, 0, 0.2);
-    
-    /* ★ 핵심 수정 사항: 크기 강제 지정 및 정렬 ★ */
-    display: inline-flex !important;  /* 내용을 중앙에 배치 */
-    align-items: center;
-    justify-content: center;
-    width: 36px !important;       /* 강제 너비 */
-    height: 36px !important;      /* 강제 높이 */
-    min-width: 36px;              /* 찌그러짐 방지 */
-    font-size: 1.2em;             /* 아이콘 크기 */
-    padding: 0 !important;        /* 패딩 초기화 (크기 고정 위함) */
-    flex-shrink: 0;               /* 탑바 좁아져도 버튼 안 줄어들게 설정 */
-    z-index: 200;                 /* 다른 버튼 위에 오도록 우선순위 높임 */
-    box-sizing: border-box;
+    display: inline-flex !important; align-items: center; justify-content: center;
+    width: 36px !important; height: 36px !important; min-width: 36px;
+    font-size: 1.2em; padding: 0 !important; flex-shrink: 0;
+    z-index: 200; box-sizing: border-box;
 }
-
-#vn-toggle-btn:hover {
-    color: #fff;
-    border-color: #888;
-    background: rgba(255, 255, 255, 0.1);
-}
-
-#vn-toggle-btn.active {
-    color: #fff;
-    background-color: #ff6b6b;
-    border-color: #ff6b6b;
-    box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
-}
+#vn-toggle-btn:hover { color: #fff; border-color: #888; background: rgba(255, 255, 255, 0.1); }
+#vn-toggle-btn.active { color: #fff; background-color: #ff6b6b; border-color: #ff6b6b; box-shadow: 0 0 8px rgba(255, 107, 107, 0.5); }
 #vn-close-btn {
     position: absolute; top: 20px; right: 30px;
     color: #d4c4a8; font-size: 20px; font-weight: bold;
     cursor: pointer; z-index: 100; opacity: 0.8; pointer-events: auto;
     background: rgba(255,255,255,0.5);
-    width: 36px; height: 36px; text-align: center; line-height: 36px;
-    border-radius: 50%;
+    width: 36px; height: 36px; text-align: center; line-height: 36px; border-radius: 50%;
 }
 #vn-close-btn:hover { opacity: 1; color: #fff; background: #f2a900; }
 
-/* ======================================================= */
-/* ★ 모바일 반응형 설정 (Max-width: 900px) - 수정됨 */
-/* ======================================================= */
+/* [5] 모바일 반응형 */
 @media (max-width: 900px) {
-    .vn-character-sprite { 
-        /* 높이를 화면 85%까지 허용, 가로는 화면폭을 넘어도 되게 150%로 설정하여 찌그러짐 방지 */
-        max-height: 85vh !important; 
-        max-width: 150vw !important; 
-        bottom: -20px !important; /* 바닥에 좀 더 붙임 */
+    .vn-character-sprite { max-height: 85vh !important; max-width: 150vw !important; bottom: -20px !important; }
+    .vn-character-sprite.center-pos { max-width: 150vw !important; left: 50%; 
+        transform: translateX(calc(-50% + var(--curr-x))) translateY(var(--curr-y)) scale(var(--curr-scale)); 
     }
+    .vn-character-sprite.left-pos, .vn-character-sprite.right-pos {
+        max-height: 85vh !important; max-width: 65vw !important; bottom: 100px !important; 
+    }
+    .vn-character-sprite.left-pos { left: -15% !important; transform-origin: bottom left; }
+    .vn-character-sprite.right-pos { right: -15% !important; transform-origin: bottom right; }
 
-    /* 위치별 미세 조정 */
-    .vn-character-sprite.left-pos { left: -10% !important; }
-    .vn-character-sprite.right-pos { right: -10% !important; }
-    
-    /* 가운데 정렬일 때도 꽉 차게 */
-    .vn-character-sprite.center-pos { 
-        max-width: 150vw !important; 
-        left: 50%; 
-        transform: translateX(-50%);
-    }
-    
-    /* 대화창 스타일 (건드리지 않음) */
-    #vn-dialog-box {
-        bottom: 10px; min-height: 180px; padding: 25px 30px 20px 30px;
-        max-width: 98%; border-radius: 25px;
-    }
+    #vn-dialog-box { bottom: 10px; min-height: 180px; padding: 25px 30px 20px 30px; max-width: 98%; border-radius: 25px; }
     #vn-text-content { font-size: 0.9em; line-height: 1.4; margin-bottom: 5px; }
     #vn-user-input { font-size: 1.0em; height: 35px; padding: 8px 18px; }
     #vn-send-btn { width: 70px; height: 35px; font-size: 0.9em; }
-    #vn-dialog-box::before {
-        top: -15px; left: 20px; font-size: 1.0em; padding: 5px 15px;
-    }
+    #vn-dialog-box::before { top: -15px; left: 20px; font-size: 1.0em; padding: 5px 15px; }
     #vn-close-btn { top: 10px; right: 15px; width: 30px; height: 30px; line-height: 30px; font-size: 16px; }
+    
     #vn-settings-area { top: 10px; left: 10px; }
     #vn-user-sprite-toggle { padding: 5px 8px; font-size: 0.8em; }
-    #vn-indicator {
-        bottom: 15px; right: 30px;
-        border-left: 10px solid transparent; border-right: 10px solid transparent;
-        border-top: 15px solid #f2a900; 
-    }
+    #vn-bgm-toggle-btn { padding: 5px 8px; font-size: 0.8em; width: auto; min-width: 36px; }
+    #vn-bgm-panel { top: 50px; left: 10px; width: 280px; }
+    
+    #vn-preset-container { top: 50px; right: 10px; }
+    #vn-preset-panel { width: 260px; right: 0; }
 
-/* ★ 모바일 버튼 위치 조정 ★ */
-    #vn-toggle-btn {
-        position: relative;  /* 위치 이동을 위해 relative 설정 */
-        top: 30px;           /* 원래 위치보다 5px 아래로 내림 (필요시 숫자 늘리세요 예: 10px) */
-        margin-top: 5px;     /* 상단 여백 추가 */
-        padding: 10px 15px;  /* 손가락 터치하기 편하게 터치 영역 확대 */
-        font-size: 1.3em;    /* 모바일에서는 아이콘을 더 크게 */
+    #vn-indicator { bottom: 15px; right: 30px; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 15px solid #f2a900; }
+    #vn-toggle-btn { position: relative; top: 30px; margin-top: 5px; padding: 10px 15px; font-size: 1.3em; }
+}
+
+/* [모바일 전용 명암 수정] 투명도(opacity) 끄고 밝기(brightness)만 어둡게 강제 적용 */
+@media (max-width: 900px) {
+    .vn-character-sprite.dimmed {
+        /* 투명도는 100%로 유지 (뒤가 비치지 않게) */
+        opacity: 1 !important; 
+        
+        /* 밝기를 50%로 낮춤 (숫자가 낮을수록 더 어두워짐) */
+        filter: brightness(50%) grayscale(20%) !important; 
+        
+        /* 어두운 캐릭터는 항상 뒤쪽으로 */
+        z-index: 5 !important; 
+
+    
+    /* 말하는 캐릭터(활성)는 원래 밝기로 복구 */
+    .vn-character-sprite:not(.dimmed) {
+        filter: brightness(100%) !important;
+        opacity: 1 !important;
+        z-index: 15 !important;
     }
 }
