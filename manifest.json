@@ -1,0 +1,10 @@
+{
+    "display_name": "VN Mode Reader",
+    "author": "Veda",
+    "version": "1.6.0",
+    "loading_order": 100,
+    "requires": [],
+    "optional_keywords": [],
+    "js": "index.js",
+    "css": "vn_mode_style.css"
+}
