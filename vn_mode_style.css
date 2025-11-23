@@ -174,7 +174,56 @@
 
 body.vn-mode-active #sheld, body.vn-mode-active #top-bar, body.vn-mode-active .drawer-toggle { opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
 
-#vn-toggle-btn { cursor: pointer; font-weight: bold; color: #aaa; margin-left: 10px; border: 1px solid #444; border-radius: 8px; transition: all 0.3s; background: rgba(0, 0, 0, 0.2); display: inline-flex !important; align-items: center; justify-content: center; width: 36px !important; height: 36px !important; min-width: 36px; font-size: 1.2em; padding: 0 !important; flex-shrink: 0; z-index: 200; box-sizing: border-box; }
+/* [수정됨] border-radius의 !important 제거 */
+#vn-toggle-btn { 
+    position: fixed !important; 
+    top: 10px; 
+    left: 10px; 
+    
+    cursor: grab;
+    font-weight: bold; 
+    color: #aaa; 
+    border: 1px solid #444; 
+    
+    /* ★★★ 여기가 핵심! !important를 지웠습니다 ★★★ */
+    border-radius: 50%; 
+    
+    transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s; 
+    background-color: rgba(30, 30, 30, 0.8); 
+    
+    display: flex !important; 
+    align-items: center; 
+    justify-content: center; 
+    
+    width: 40px; 
+    height: 40px; 
+
+    font-size: 1.2em; 
+    padding: 0 !important; 
+    z-index: 20000 !important;
+    box-sizing: border-box; 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    user-select: none;
+}
+#vn-toggle-btn:active {
+    cursor: grabbing;
+}
+
+#vn-toggle-btn:hover { 
+    color: #fff; 
+    border-color: #888; 
+    background-color: rgba(50, 50, 50, 0.9); 
+    transform: scale(1.1);
+}
+
+#vn-toggle-btn.active { 
+    color: #fff; 
+    background-color: #ff6b6b; 
+    border-color: #ff6b6b; 
+    box-shadow: 0 0 10px rgba(255, 107, 107, 0.6); 
+}
 #vn-toggle-btn:hover { color: #fff; border-color: #888; background: rgba(255, 255, 255, 0.1); }
 #vn-toggle-btn.active { color: #fff; background-color: #ff6b6b; border-color: #ff6b6b; box-shadow: 0 0 8px rgba(255, 107, 107, 0.5); }
 #vn-close-btn { position: absolute; top: 20px; right: 30px; color: #d4c4a8; font-size: 20px; font-weight: bold; cursor: pointer; z-index: 100; opacity: 0.8; pointer-events: auto; background: rgba(255,255,255,0.5); width: 36px; height: 36px; text-align: center; line-height: 36px; border-radius: 50%; }
@@ -281,4 +330,9 @@ body.vn-mode-active #sheld, body.vn-mode-active #top-bar, body.vn-mode-active .d
     margin: 10px 0 !important;
     width: 85% !important;
     max-width: 400px !important;
+}
+
+/* [추가] VN 모드가 켜져있을 때 진입 버튼 숨기기 */
+body.vn-mode-active #vn-toggle-btn {
+    display: none !important;
 }

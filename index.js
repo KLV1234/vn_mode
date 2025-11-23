@@ -1,6 +1,6 @@
-// VN Mode Script v5.8.0 - Scene Video Support Added
+// VN Mode Script v5.9.0 - Draggable Button & Custom Icon Support
 jQuery(document).ready(function () {
-    console.log("[VN Mode] Loading Extension v5.8.0 (Scene Video Support)...");
+    console.log("[VN Mode] Loading Extension v5.9.0 (Draggable Button)...");
 
     // [상태 변수]
     let isVnModeOn = false;
@@ -17,6 +17,12 @@ jQuery(document).ready(function () {
     let CURRENT_THEME = localStorage.getItem('vnModeTheme') || 'default';
     let CURRENT_FONT_SIZE = parseFloat(localStorage.getItem('vnModeFontSize')) || 1.7;
 
+    // ★ [New] 버튼 커스텀 설정 변수
+    let BTN_ICON_URL = localStorage.getItem('vnModeBtnIcon') || "";
+    let BTN_SIZE = parseInt(localStorage.getItem('vnModeBtnSize')) || 40;
+    let BTN_POS_X = parseInt(localStorage.getItem('vnModeBtnX')) || 20;
+    let BTN_POS_Y = parseInt(localStorage.getItem('vnModeBtnY')) || 80;
+
     // BGM 관련 변수
     let bgmPlaylist = JSON.parse(localStorage.getItem('vnModeBgmPlaylist') || '[]'); 
     let bgmPresets = JSON.parse(localStorage.getItem('vnModeBgmPresets') || '{}');
@@ -26,12 +32,11 @@ jQuery(document).ready(function () {
     let bgmShuffle = false;
     let bgmLoopMode = 0; 
 
-    // 타자기 효과 변수
+    // 타자기 및 기타 변수
     let isTyping = false;
     let typingTimer = null;
     let currentFullText = "";
     const TYPE_SPEED = 35;
-
     let currentLeftSrc = "";
     let currentRightSrc = "";
     let currentBgSrc = "";
@@ -70,9 +75,7 @@ jQuery(document).ready(function () {
         <div id="vn-overlay">
             <div id="vn-background-layer"></div>
             <div id="vn-sprite-layer"></div>
-            
             <div id="vn-choice-area"></div>
-
             <div id="vn-video-layer" style="display:none;">
                 <video id="vn-scene-video" style="width:100%; height:100%; object-fit:cover; background:#000;" playsinline></video>
                 <div id="vn-video-skip" title="Click to Skip">SKIP >></div>
@@ -129,13 +132,26 @@ jQuery(document).ready(function () {
                 <button id="vn-preset-toggle-btn" title="Theme Settings"><i class="fa-solid fa-palette"></i> Theme</button>
                 <div id="vn-preset-panel">
                     <h4>Display Settings</h4>
-                    <div class="vn-setting-row" style="margin-bottom: 15px; background: #f9f9f9; padding: 8px; border-radius: 6px; border: 1px solid #eee;">
-                        <label style="margin-bottom:5px; font-weight:bold;">Font Size</label>
+                    <div class="vn-setting-row" style="margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 6px; border: 1px solid #eee;">
+                        <label style="margin-bottom:5px; font-weight:bold; display:block;">Font Size</label>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <input type="range" id="vn-font-size-slider" min="0.8" max="3.5" step="0.1" style="flex-grow: 1;">
-                            <input type="number" id="vn-font-size-input" min="0.8" max="3.5" step="0.1" style="width: 60px;">
+                            <input type="number" id="vn-font-size-input" min="0.8" max="3.5" step="0.1" style="width: 50px;">
                         </div>
                     </div>
+
+                    <div class="vn-setting-row" style="margin-bottom: 15px; background: #E3F2FD; padding: 8px; border-radius: 6px; border: 1px solid #BBDEFB;">
+                        <label style="margin-bottom:5px; font-weight:bold; display:block; color:#1565C0;">🔘 ON/OFF Button Style</label>
+                        <label style="font-size:0.8em; color:#555;">Icon URL (Empty = Default)</label>
+                        <input type="text" id="vn-btn-icon-input" placeholder="http://... (Image URL)" style="width:100%; margin-bottom:5px; padding:4px; border:1px solid #ccc; border-radius:4px;">
+                        
+                        <label style="font-size:0.8em; color:#555;">Button Size</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" id="vn-btn-size-slider" min="20" max="100" step="1" style="flex-grow: 1;">
+                            <span id="vn-btn-size-val" style="font-size:0.85em; font-weight:bold; width:30px;">40px</span>
+                        </div>
+                    </div>
+
                     <label>Theme Preset:</label>
                     <select id="vn-theme-select"></select>
                     <div id="vn-custom-css-area">
@@ -175,95 +191,252 @@ jQuery(document).ready(function () {
                 <div id="vn-indicator"></div>
             </div>
         </div>
-        
-        <style>
-            /* ★ 선택지 스타일 (화면 전체 오버레이) */
-            #vn-choice-area {
-                display: none; 
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.6); z-index: 100; pointer-events: auto;
-                flex-direction: column; justify-content: center; align-items: center; gap: 15px;
-                backdrop-filter: blur(2px);
-            }
-            .vn-choice-btn {
-                padding: 18px 30px; width: 70%; max-width: 700px;
-                background: #fff; border: 3px solid #f2a900; border-radius: 35px;
-                color: #444; font-size: 1.2em; font-weight: bold; text-align: center;
-                cursor: pointer; transition: all 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-                font-family: 'Jua', sans-serif;
-            }
-            .vn-choice-btn:hover {
-                transform: scale(1.03); background: #fff8e1; border-color: #ff8f00;
-            }
-            /* 직접 입력 버튼 스타일 */
-            .vn-choice-btn.direct-input {
-                background: #eee; border-color: #bbb; color: #666; margin-top: 15px; font-size: 1.1em;
-            }
-            .vn-choice-btn.direct-input:hover {
-                background: #e0e0e0; border-color: #999; color: #333;
-            }
-
-            /* [수정] 효과 다 뺀 CSS */
-#vn-video-layer {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 999999;
-    background: #000;
-    display: none; /* 기본 숨김 */
-    /* transition, opacity 줄 삭제함 */
-}
-
-#vn-scene-video {
-    width: 100%; height: 100%; 
-    object-fit: cover; 
-    /* transition, opacity 줄 삭제함 */
-}
-
-#vn-video-skip {
-    /* 기존 스타일 유지 */
-    position: absolute; bottom: 30px; right: 30px;
-    color: rgba(255,255,255,0.5); font-size: 1.2em; font-weight: bold;
-    cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
-    padding: 5px 15px; border-radius: 20px;
-    z-index: 1000000; transition: 0.3s;
-}
-#vn-video-skip:hover { color: #fff; border-color: #fff; background: rgba(0,0,0,0.5); }
-            #vn-video-skip {
-                position: absolute; bottom: 30px; right: 30px;
-                color: rgba(255,255,255,0.5); font-size: 1.2em; font-weight: bold;
-                cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
-                padding: 5px 15px; border-radius: 20px;
-                z-index: 1000000; transition: 0.3s;
-            }
-            #vn-video-skip:hover { color: #fff; border-color: #fff; background: rgba(0,0,0,0.5); }
-        </style>
+        <style> /* 기존 스타일 유지 (CSS 파일에서 제어) */ </style>
     `;
 
+    // -------------------------------------------------------
+    // [UI 생성 및 버튼 초기화]
+    // -------------------------------------------------------
     if ($('#vn-overlay').length === 0) { $('body').append(htmlTemplate); }
-    if ($('#vn-toggle-btn').length === 0) { $('#top-bar').append(`<div class="fa-solid fa-book menu_button" id="vn-toggle-btn" title="VN Mode ON/OFF"></div>`); }
     if ($('#vn-mode-theme-css').length === 0) { $('<style id="vn-mode-theme-css">').appendTo('head'); }
 
-    // -------------------------------------------------------
-    // [3] 기본 함수들
-    // -------------------------------------------------------
-    function extractNameFromSrc(src) {
-        if (!src) return "";
-        try {
-            const filename = decodeURIComponent(src.substring(src.lastIndexOf('/') + 1));
-            const namePart = filename.split('.')[0];
-            const parts = namePart.split('-');
-            let rawName = "";
-            if (parts[0].toLowerCase() === 'user' && parts.length > 1) { rawName = parts[1].split('_')[0]; } 
-            else { rawName = parts[0].split('_')[0]; }
-            if (rawName.length > 0) { return rawName.charAt(0).toUpperCase() + rawName.slice(1); }
-            return "";
-        } catch (e) { console.error("VN Mode Name Parse Error:", e); return ""; }
+    // ★ [New] 버튼 생성 (body에 직접 추가하여 자유롭게 이동)
+    if ($('#vn-toggle-btn').length === 0) {
+        // 기존 top-bar에 있는 버튼 제거 (업데이트 충돌 방지)
+        $('#top-bar').find('#vn-toggle-btn').remove();
+        $('body').append(`<div id="vn-toggle-btn" title="VN Mode ON/OFF (Drag to move)"></div>`);
     }
 
-    function updateNameLabel(src) {
-        const name = extractNameFromSrc(src);
-        const $label = $('#vn-name-label');
-        if (name) { $label.text(name).fadeIn(200); } else { $label.text("Talk"); }
+    // -------------------------------------------------------
+    // [New] 버튼 스타일 및 드래그 로직
+    // -------------------------------------------------------
+// [수정됨] 이미지 모양 그대로 나오게 (강제 적용)
+    function applyBtnStyle() {
+        const $btn = $('#vn-toggle-btn');
+        const fontSize = BTN_SIZE * 0.5; 
+
+        // 1. 기본 크기/위치 설정
+        $btn.css({
+            'left': BTN_POS_X + 'px',
+            'top': BTN_POS_Y + 'px',
+            'width': BTN_SIZE + 'px',
+            'height': BTN_SIZE + 'px',
+            'min-width': BTN_SIZE + 'px',
+            'line-height': BTN_SIZE + 'px',
+            'font-size': fontSize + 'px'
+        });
+
+        // 2. 이미지 유무에 따른 스타일
+        if (BTN_ICON_URL && BTN_ICON_URL.trim() !== "") {
+            // ★ 이미지가 있을 때: 네모/투명/원본비율
+            $btn.removeClass('fa-solid fa-book');
+            $btn.text(""); 
+            
+            $btn.css({
+                'background-image': `url('${BTN_ICON_URL}')`,
+                'background-size': 'contain', /* 이미지 비율 유지하며 꽉 차게 */
+                'background-repeat': 'no-repeat',
+                'background-position': 'center',
+                
+                'background-color': 'transparent', 
+                'border': 'none',
+                
+                // ★ 중요: 둥글게 깎는 속성을 0으로 강제 설정
+                'border-radius': '0', 
+                'box-shadow': 'none'
+            });
+            
+        } else {
+            // ★ 이미지가 없을 때: 기본 둥근 버튼
+            $btn.css('background-image', 'none');
+            $btn.addClass('fa-solid fa-book');
+            
+            $btn.css({
+                'background-color': 'rgba(30, 30, 30, 0.8)',
+                'border': '1px solid #444',
+                'border-radius': '50%', /* 다시 동그랗게 */
+                'box-shadow': '' 
+            });
+        }
+
+        // 설정값 동기화
+        $('#vn-btn-icon-input').val(BTN_ICON_URL);
+        $('#vn-btn-size-slider').val(BTN_SIZE);
+        $('#vn-btn-size-val').text(BTN_SIZE + 'px');
     }
+
+// [최종 수정] 모바일 렉 제거(최적화) + 위치 저장 버그 수정
+    function makeButtonDraggable() {
+        const btn = document.getElementById('vn-toggle-btn');
+        const $btn = $(btn);
+
+        // 기존 이벤트 제거 (중복 방지)
+        $btn.off('click'); 
+        $(document).off('click', '#vn-toggle-btn');
+        $(document).off('mousedown', '#vn-toggle-btn');
+        $(document).off('touchstart', '#vn-toggle-btn');
+
+        // 상태 변수
+        let isDragging = false;
+        let hasMoved = false;
+        
+        // 좌표 계산 변수
+        let startX, startY;       // 터치 시작 지점
+        let initialLeft, initialTop; // 버튼의 원래 위치
+        
+        // 애니메이션 최적화 변수 (렉 방지)
+        let rafId = null; 
+        let currentX, currentY;
+
+        // [1] 드래그 시작
+        function onStart(x, y) {
+            isDragging = true;
+            hasMoved = false;
+            startX = x;
+            startY = y;
+            
+            // 현재 버튼의 실제 화면상 위치 가져오기
+            const rect = btn.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+
+            // 부드러운 이동을 위해 트랜지션 끄기
+            btn.style.transition = 'none';
+            btn.style.cursor = 'grabbing';
+        }
+
+        // [2] 화면 그리기 (requestAnimationFrame 사용 - 렉 해결 핵심)
+        function updatePosition() {
+            if (!isDragging) return;
+
+            const dx = currentX - startX;
+            const dy = currentY - startY;
+
+            // 5픽셀 이상 움직였을 때만 드래그로 간주
+            if (!hasMoved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+                hasMoved = true;
+            }
+
+            // 새 위치 계산
+            let newLeft = initialLeft + dx;
+            let newTop = initialTop + dy;
+
+            // 화면 밖으로 나가지 않게 제한
+            const maxLeft = window.innerWidth - btn.offsetWidth;
+            const maxTop = window.innerHeight - btn.offsetHeight;
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+
+            // 스타일 적용
+            btn.style.left = newLeft + 'px';
+            btn.style.top = newTop + 'px';
+
+            // 다음 프레임 요청
+            rafId = requestAnimationFrame(updatePosition);
+        }
+
+        // [3] 이동 이벤트 핸들러
+        function onMove(x, y) {
+            if (!isDragging) return;
+            currentX = x;
+            currentY = y;
+            
+            // 이미 애니메이션 프레임이 돌고 있지 않을 때만 실행 (과부하 방지)
+            if (!rafId) {
+                rafId = requestAnimationFrame(updatePosition);
+            }
+        }
+
+        // [4] 드래그 종료 (저장 로직)
+        function onEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            // 애니메이션 루프 정지
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+
+            btn.style.cursor = 'grab';
+            btn.style.transition = 'transform 0.1s, box-shadow 0.2s'; // 애니메이션 복구
+
+            // ★ 위치 저장 (이게 안 돼서 초기화됐던 것)
+            const finalRect = btn.getBoundingClientRect();
+            BTN_POS_X = parseInt(finalRect.left);
+            BTN_POS_Y = parseInt(finalRect.top);
+            
+            localStorage.setItem('vnModeBtnX', BTN_POS_X);
+            localStorage.setItem('vnModeBtnY', BTN_POS_Y);
+        }
+
+        // ============================
+        // 이벤트 리스너 등록
+        // ============================
+
+        // PC 마우스
+        btn.onmousedown = function(e) {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            onStart(e.clientX, e.clientY);
+
+            document.onmousemove = function(e) {
+                e.preventDefault();
+                onMove(e.clientX, e.clientY);
+            };
+
+            document.onmouseup = function() {
+                onEnd();
+                document.onmousemove = null;
+                document.onmouseup = null;
+            };
+        };
+
+        // 모바일 터치 (passive: false로 스크롤 방지하여 렉 줄임)
+        btn.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) return;
+            const touch = e.touches[0];
+            onStart(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        btn.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            // 드래그 중 화면 스크롤되는 것 막기 (렉 원인 1순위 제거)
+            if (e.cancelable) e.preventDefault(); 
+            
+            const touch = e.touches[0];
+            onMove(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        btn.addEventListener('touchend', function(e) {
+            onEnd();
+        });
+
+        // 클릭 실행 로직
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // 움직이지 않았을 때만 실행 (클릭)
+            if (!hasMoved) {
+                toggleVNMode();
+            }
+        };
+
+        // 화면 회전/리사이즈 시 위치 보정
+        window.addEventListener('resize', function() {
+            const rect = btn.getBoundingClientRect();
+            if (rect.right > window.innerWidth) btn.style.left = (window.innerWidth - rect.width - 10) + 'px';
+            if (rect.bottom > window.innerHeight) btn.style.top = (window.innerHeight - rect.height - 10) + 'px';
+        });
+    }
+
+
+    // -------------------------------------------------------
+    // [기본 로직 함수들]
+    // -------------------------------------------------------
+    function extractNameFromSrc(src) { if (!src) return ""; try { const filename = decodeURIComponent(src.substring(src.lastIndexOf('/') + 1)); const namePart = filename.split('.')[0]; const parts = namePart.split('-'); let rawName = ""; if (parts[0].toLowerCase() === 'user' && parts.length > 1) { rawName = parts[1].split('_')[0]; } else { rawName = parts[0].split('_')[0]; } if (rawName.length > 0) { return rawName.charAt(0).toUpperCase() + rawName.slice(1); } return ""; } catch (e) { console.error(e); return ""; } }
+    function updateNameLabel(src) { const name = extractNameFromSrc(src); const $label = $('#vn-name-label'); if (name) { $label.text(name).fadeIn(200); } else { $label.text("Talk"); } }
 
     function applyFontSize(size) {
         size = parseFloat(size); if (isNaN(size)) return;
@@ -313,14 +486,7 @@ jQuery(document).ready(function () {
     function updatePortraitToggleState() {
         const $btn = $('#vn-portrait-mode-toggle'); const $dialog = $('#vn-dialog-box');
         const $spriteLayer = $('#vn-sprite-layer'); const $portraitBox = $('#vn-portrait-box');
-
-        if (ENABLE_PORTRAIT_MODE) {
-            $btn.removeClass('off').addClass('on').css({'background-color':'#009688', 'border-color':'#00796B'});
-            $dialog.addClass('vn-portrait-mode-active'); $spriteLayer.hide(); $portraitBox.show();
-        } else {
-            $btn.removeClass('on').addClass('off').css({'background-color':'#607D8B', 'border-color':'#455A64'});
-            $dialog.removeClass('vn-portrait-mode-active'); $spriteLayer.show(); $portraitBox.hide();
-        }
+        if (ENABLE_PORTRAIT_MODE) { $btn.removeClass('off').addClass('on').css({'background-color':'#009688', 'border-color':'#00796B'}); $dialog.addClass('vn-portrait-mode-active'); $spriteLayer.hide(); $portraitBox.show(); } else { $btn.removeClass('on').addClass('off').css({'background-color':'#607D8B', 'border-color':'#455A64'}); $dialog.removeClass('vn-portrait-mode-active'); $spriteLayer.show(); $portraitBox.hide(); }
     }
 
     function updateToggleButtonState() {
@@ -331,6 +497,10 @@ jQuery(document).ready(function () {
 
     updateThemeSelect(); applyTheme(CURRENT_THEME); applyFontSize(CURRENT_FONT_SIZE);
     updateToggleButtonState(); updatePortraitToggleState();
+    
+    // ★ 버튼 초기화 실행
+    applyBtnStyle();
+    makeButtonDraggable();
 
     function toggleVNMode() {
         isVnModeOn = !isVnModeOn;
@@ -344,71 +514,36 @@ jQuery(document).ready(function () {
         }
     }
 
-    // -------------------------------------------------------
     // [BGM] 플레이어 로직
-    // -------------------------------------------------------
     bgmAudio.addEventListener('ended', function() { if (bgmLoopMode === 1) { bgmAudio.currentTime = 0; bgmAudio.play(); } else { playNext(true); } });
-    function renderPlaylist() {
-        const $list = $('#vn-bgm-list'); $list.empty();
-        if (bgmPlaylist.length === 0) { $list.append('<li style="color:#aaa; text-align:center;">No music added.</li>'); return; }
-        bgmPlaylist.forEach((track, index) => {
-            const activeClass = (index === currentBgmIndex) ? 'active' : '';
-            const icon = (index === currentBgmIndex && isBgmPlaying) ? '<i class="fa-solid fa-volume-high"></i> ' : '<i class="fa-solid fa-music"></i> ';
-            const $li = $(`<li class="${activeClass}" data-index="${index}"><span class="track-name" style="flex-grow:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${icon}${track.name}</span><button class="vn-bgm-del-btn" title="Remove"><i class="fa-solid fa-xmark"></i></button></li>`);
-            $li.find('.track-name').on('click', function(e) { e.stopPropagation(); playBgm(index); });
-            $li.find('.vn-bgm-del-btn').on('click', function(e) { e.stopPropagation(); removeTrack(index); });
-            $li.on('click', function(e) { e.stopPropagation(); });
-            $list.append($li);
-        });
-    }
-    function updateBgmPresetUI() {
-        const $select = $('#vn-bgm-preset-select'); $select.empty(); $select.append('<option value="">-- Select Preset --</option>');
-        for (let name in bgmPresets) { const count = bgmPresets[name] ? bgmPresets[name].length : 0; $select.append(new Option(`${name} (${count} tracks)`, name)); }
-    }
-    function playBgm(index) {
-        if (index < 0 || index >= bgmPlaylist.length) return;
-        if (currentBgmIndex === index && !bgmAudio.paused) { bgmAudio.pause(); isBgmPlaying = false; } 
-        else { if (currentBgmIndex !== index) { bgmAudio.src = bgmPlaylist[index].url; currentBgmIndex = index; } bgmAudio.play().catch(e => console.error(e)); isBgmPlaying = true; }
-        updateBgmUI();
-    }
-    function playNext(isAuto = false) {
-        if (bgmPlaylist.length === 0) return;
-        if (bgmLoopMode === 2 && isAuto && currentBgmIndex === bgmPlaylist.length - 1 && !bgmShuffle) { stopBgm(); return; }
-        let nextIndex;
-        if (bgmShuffle) { if (bgmPlaylist.length > 1) { do { nextIndex = Math.floor(Math.random() * bgmPlaylist.length); } while (nextIndex === currentBgmIndex); } else { nextIndex = 0; } } 
-        else { nextIndex = currentBgmIndex + 1; if (nextIndex >= bgmPlaylist.length) nextIndex = 0; }
-        bgmAudio.src = bgmPlaylist[nextIndex].url; currentBgmIndex = nextIndex; bgmAudio.play(); isBgmPlaying = true; updateBgmUI();
-    }
-    function playPrev() {
-        if (bgmPlaylist.length === 0) return;
-        let prevIndex = currentBgmIndex - 1; if (prevIndex < 0) prevIndex = bgmPlaylist.length - 1;
-        bgmAudio.src = bgmPlaylist[prevIndex].url; currentBgmIndex = prevIndex; bgmAudio.play(); isBgmPlaying = true; updateBgmUI();
-    }
+    function renderPlaylist() { const $list = $('#vn-bgm-list'); $list.empty(); if (bgmPlaylist.length === 0) { $list.append('<li style="color:#aaa; text-align:center;">No music added.</li>'); return; } bgmPlaylist.forEach((track, index) => { const activeClass = (index === currentBgmIndex) ? 'active' : ''; const icon = (index === currentBgmIndex && isBgmPlaying) ? '<i class="fa-solid fa-volume-high"></i> ' : '<i class="fa-solid fa-music"></i> '; const $li = $(`<li class="${activeClass}" data-index="${index}"><span class="track-name" style="flex-grow:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${icon}${track.name}</span><button class="vn-bgm-del-btn" title="Remove"><i class="fa-solid fa-xmark"></i></button></li>`); $li.find('.track-name').on('click', function(e) { e.stopPropagation(); playBgm(index); }); $li.find('.vn-bgm-del-btn').on('click', function(e) { e.stopPropagation(); removeTrack(index); }); $li.on('click', function(e) { e.stopPropagation(); }); $list.append($li); }); }
+    function updateBgmPresetUI() { const $select = $('#vn-bgm-preset-select'); $select.empty(); $select.append('<option value="">-- Select Preset --</option>'); for (let name in bgmPresets) { const count = bgmPresets[name] ? bgmPresets[name].length : 0; $select.append(new Option(`${name} (${count} tracks)`, name)); } }
+    function playBgm(index) { if (index < 0 || index >= bgmPlaylist.length) return; if (currentBgmIndex === index && !bgmAudio.paused) { bgmAudio.pause(); isBgmPlaying = false; } else { if (currentBgmIndex !== index) { bgmAudio.src = bgmPlaylist[index].url; currentBgmIndex = index; } bgmAudio.play().catch(e => console.error(e)); isBgmPlaying = true; } updateBgmUI(); }
+    function playNext(isAuto = false) { if (bgmPlaylist.length === 0) return; if (bgmLoopMode === 2 && isAuto && currentBgmIndex === bgmPlaylist.length - 1 && !bgmShuffle) { stopBgm(); return; } let nextIndex; if (bgmShuffle) { if (bgmPlaylist.length > 1) { do { nextIndex = Math.floor(Math.random() * bgmPlaylist.length); } while (nextIndex === currentBgmIndex); } else { nextIndex = 0; } } else { nextIndex = currentBgmIndex + 1; if (nextIndex >= bgmPlaylist.length) nextIndex = 0; } bgmAudio.src = bgmPlaylist[nextIndex].url; currentBgmIndex = nextIndex; bgmAudio.play(); isBgmPlaying = true; updateBgmUI(); }
+    function playPrev() { if (bgmPlaylist.length === 0) return; let prevIndex = currentBgmIndex - 1; if (prevIndex < 0) prevIndex = bgmPlaylist.length - 1; bgmAudio.src = bgmPlaylist[prevIndex].url; currentBgmIndex = prevIndex; bgmAudio.play(); isBgmPlaying = true; updateBgmUI(); }
     function stopBgm() { bgmAudio.pause(); isBgmPlaying = false; updateBgmUI(); }
-    function updateBgmUI() {
-        const $btnIcon = $('#vn-bgm-play-pause i'); const $toggleBtn = $('#vn-bgm-toggle-btn');
-        if (isBgmPlaying && !bgmAudio.paused) { $btnIcon.removeClass('fa-play').addClass('fa-pause'); $toggleBtn.addClass('playing'); } 
-        else { $btnIcon.removeClass('fa-pause').addClass('fa-play'); $toggleBtn.removeClass('playing'); }
-        const $shuffleBtn = $('#vn-bgm-shuffle'); if (bgmShuffle) $shuffleBtn.addClass('active'); else $shuffleBtn.removeClass('active');
-        const $loopBtn = $('#vn-bgm-loop'); $loopBtn.empty();
-        if (bgmLoopMode === 0) { $loopBtn.removeClass('active').html('<i class="fa-solid fa-repeat"></i>'); bgmAudio.loop = false; } 
-        else if (bgmLoopMode === 1) { $loopBtn.addClass('active').html('<i class="fa-solid fa-repeat"></i><span style="font-size:0.6em; position:absolute;">1</span>'); bgmAudio.loop = true; } 
-        else { $loopBtn.removeClass('active').html('<i class="fa-solid fa-arrow-right-long"></i>'); bgmAudio.loop = false; }
-        renderPlaylist(); 
-    }
-    function removeTrack(index) {
-        if (confirm("Remove this track?")) {
-            if (currentBgmIndex === index) stopBgm();
-            bgmPlaylist.splice(index, 1); localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist));
-            if (currentBgmIndex > index) currentBgmIndex--; renderPlaylist();
-        }
-    }
+    function updateBgmUI() { const $btnIcon = $('#vn-bgm-play-pause i'); const $toggleBtn = $('#vn-bgm-toggle-btn'); if (isBgmPlaying && !bgmAudio.paused) { $btnIcon.removeClass('fa-play').addClass('fa-pause'); $toggleBtn.addClass('playing'); } else { $btnIcon.removeClass('fa-pause').addClass('fa-play'); $toggleBtn.removeClass('playing'); } const $shuffleBtn = $('#vn-bgm-shuffle'); if (bgmShuffle) $shuffleBtn.addClass('active'); else $shuffleBtn.removeClass('active'); const $loopBtn = $('#vn-bgm-loop'); $loopBtn.empty(); if (bgmLoopMode === 0) { $loopBtn.removeClass('active').html('<i class="fa-solid fa-repeat"></i>'); bgmAudio.loop = false; } else if (bgmLoopMode === 1) { $loopBtn.addClass('active').html('<i class="fa-solid fa-repeat"></i><span style="font-size:0.6em; position:absolute;">1</span>'); bgmAudio.loop = true; } else { $loopBtn.removeClass('active').html('<i class="fa-solid fa-arrow-right-long"></i>'); bgmAudio.loop = false; } renderPlaylist(); }
+    function removeTrack(index) { if (confirm("Remove this track?")) { if (currentBgmIndex === index) stopBgm(); bgmPlaylist.splice(index, 1); localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist)); if (currentBgmIndex > index) currentBgmIndex--; renderPlaylist(); } }
     renderPlaylist(); updateBgmUI(); updateBgmPresetUI(); 
 
     // -------------------------------------------------------
     // [4] 이벤트 리스너
     // -------------------------------------------------------
     function stopProp(e) { e.stopPropagation(); }
+    
+    // ★ [New] 버튼 설정 이벤트
+    $('#vn-overlay').on('change input', '#vn-btn-icon-input', function(e) {
+        BTN_ICON_URL = $(this).val();
+        localStorage.setItem('vnModeBtnIcon', BTN_ICON_URL);
+        applyBtnStyle();
+    });
+    $('#vn-overlay').on('input', '#vn-btn-size-slider', function(e) {
+        BTN_SIZE = $(this).val();
+        localStorage.setItem('vnModeBtnSize', BTN_SIZE);
+        applyBtnStyle();
+    });
+
+    // 기존 이벤트
     $('#vn-overlay').on('click', '#vn-portrait-mode-toggle', function(e) { stopProp(e); ENABLE_PORTRAIT_MODE = !ENABLE_PORTRAIT_MODE; localStorage.setItem('vnModePortrait', ENABLE_PORTRAIT_MODE); updatePortraitToggleState(); setTimeout(checkLastMessage, 100); });
     $('#vn-overlay').on('click', '#vn-bgm-toggle-btn', function(e) { stopProp(e); $('#vn-bgm-panel').fadeToggle(100); });
     $('#vn-overlay').on('click', '#vn-bgm-panel', stopProp);
@@ -439,16 +574,23 @@ jQuery(document).ready(function () {
     $('#vn-overlay').on('click', '#vn-preset-toggle-btn', function(e) { stopProp(e); $('#vn-preset-panel').toggle(); });
     $('#vn-overlay').on('click', '#vn-preset-panel', stopProp);
 
+    // ★ [중요] 토글 버튼 클릭 (드래그와 클릭 구분)
+    let isClickAction = true;
+    $(document).on('mousedown', '#vn-toggle-btn', function() { isClickAction = true; });
+    $(document).on('mousemove', '#vn-toggle-btn', function() { isClickAction = false; }); 
+    $(document).on('click', '#vn-toggle-btn', function(e) { 
+        if (isClickAction) toggleVNMode(); 
+    });
+
     // -------------------------------------------------------
     // [5] 메인 로직
     // -------------------------------------------------------
     function openVN(dataArray) {
         if (!isVnModeOn) return;
-        // 리셋
         $('#vn-input-area').hide(); 
         $('#vn-text-content').show(); 
         $('#vn-indicator').show();
-        $('#vn-choice-area').empty().hide(); // 선택지 초기화
+        $('#vn-choice-area').empty().hide();
 
         vnParagraphs = (dataArray && dataArray.length > 0) ? dataArray : [{ text: "...", img: null, bg: null }];
         vnStep = 0; 
@@ -460,11 +602,9 @@ jQuery(document).ready(function () {
 
         const currentData = vnParagraphs[vnStep];
         
-        // 1. 배경/스프라이트
         if (currentData.bg) changeBackground(currentData.bg);
         if (currentData.img) changeSprite(currentData.img);
 
-        // 2. BGM
         if (currentData.bgm) {
             if (currentData.bgm.type === 'stop') { stopBgm(); console.log("[VN Mode] 🛑 BGM Stopped via tag."); } 
             else if (currentData.bgm.type === 'play') {
@@ -475,17 +615,15 @@ jQuery(document).ready(function () {
             }
         }
 
-        // [New] 3. 동영상 씬 재생 로직 (텍스트 출력 전 가로채기)
         if (currentData.video) {
             console.log(`[VN Mode] 🎬 Playing Scene: ${currentData.video}`);
             playSceneVideo(currentData.video, function() {
-                currentData.video = null; // 재생 완료 처리
-                renderText(); // 다시 호출해서 텍스트 출력 단계로 넘어감
+                currentData.video = null; 
+                renderText(); 
             });
-            return; // 여기서 함수 종료 (비디오 끝날 때까지 대기)
+            return; 
         }
 
-        // 4. 빈 줄 스킵 (단, 선택지가 있다면 스킵하지 않음!)
         const hasChoices = currentData.choices && currentData.choices.length > 0;
         if ((!currentData.text || currentData.text.trim() === "") && !hasChoices) {
             console.log("[VN Mode] Empty line. Skipping...");
@@ -495,45 +633,37 @@ jQuery(document).ready(function () {
             return; 
         }
 
-        // 5. 텍스트 출력
-        $('#vn-choice-area').empty().hide(); // 이전 선택지 숨김
+        $('#vn-choice-area').empty().hide(); 
         typeText(currentData.text, currentData.choices);
     }
 
-    // [수정됨] 효과 없음: 즉시 재생, 즉시 종료
     function playSceneVideo(url, callback) {
         const $layer = $('#vn-video-layer');
         const $video = $('#vn-scene-video');
         const videoEl = $video[0];
 
-        // 1. 즉시 표시 및 재생
         $video.attr('src', url);
-        $layer.css('display', 'block'); // display: block으로 바로 보이게
+        $layer.css('display', 'block'); 
         
         videoEl.play().catch(e => {
             console.error("Play error:", e);
             closeVideo();
         });
 
-        // 스킵 버튼
         $('#vn-video-skip').off('click').one('click', function(e) {
             e.stopPropagation();
             closeVideo();
         });
 
-        // 종료 이벤트
         videoEl.onended = function() {
             closeVideo();
         };
 
         function closeVideo() {
             videoEl.onended = null;
-            
-            // 2. 즉시 숨김 및 종료
             videoEl.pause();
             $video.attr('src', ''); 
-            $layer.css('display', 'none'); // display: none으로 바로 숨김
-            
+            $layer.css('display', 'none'); 
             if (callback) callback();
         }
     }
@@ -562,7 +692,6 @@ jQuery(document).ready(function () {
                 typingTimer = setTimeout(typeNext, TYPE_SPEED); 
             } else { 
                 isTyping = false; 
-                // 타이핑 끝난 후 선택지가 있으면 표시
                 if (choices && choices.length > 0) {
                     showChoices(choices);
                     $('#vn-indicator').hide(); 
@@ -575,36 +704,32 @@ jQuery(document).ready(function () {
         else { typeNext(); }
     }
 
-    // ★ [수정됨] 선택지 표시: 화면 중앙 Overlay + 직접 입력 추가
     function showChoices(choices) {
         const $area = $('#vn-choice-area');
         $area.empty();
         
-        // 1. 선택지 버튼 생성
         choices.forEach(choiceText => {
             const $btn = $('<div class="vn-choice-btn"></div>').text(choiceText);
             $btn.on('click', function(e) {
                 e.stopPropagation(); 
-                // 숫자/점/공백 제거
                 const cleanText = choiceText.replace(/^\s*\d+[\.\)]\s*/, '');
                 sendUserMessage(cleanText); 
             });
             $area.append($btn);
         });
 
-        // 2. "직접 입력하기" 버튼 추가 (항상)
         const $directBtn = $('<div class="vn-choice-btn direct-input">✍️ 직접 입력하기</div>');
         $directBtn.on('click', function(e) {
             e.stopPropagation();
-            $area.hide(); // 선택지 숨김
-            $('#vn-text-content').hide(); // 텍스트 숨김
+            $area.hide(); 
+            $('#vn-text-content').hide(); 
             $('#vn-indicator').hide(); 
-            $('#vn-input-area').css('display', 'flex'); // 입력창 표시
-            $('#vn-user-input').focus(); // 포커스 이동
+            $('#vn-input-area').css('display', 'flex'); 
+            $('#vn-user-input').focus(); 
         });
         $area.append($directBtn);
 
-        $area.css('display', 'flex'); // Overlay 표시
+        $area.css('display', 'flex'); 
     }
 
     function changeSprite(src) {
@@ -722,14 +847,12 @@ jQuery(document).ready(function () {
                     lines.forEach((line, idx) => {
                         let lineText = line; 
                         let lineBgm = null;
-                        let lineVideo = null; // [New] 비디오 변수
+                        let lineVideo = null; 
                         
-                        // BGM 파싱: [[ ]]
                         if (/\[\[bgm-stop\]\]/i.test(lineText)) { lineBgm = { type: 'stop' }; lineText = lineText.replace(/\[\[bgm-stop\]\]/gi, ""); }
                         const startMatch = lineText.match(/\[\[bgm-start\s*:\s*(.*?)\s*\]\]/i);
                         if (startMatch) { lineBgm = { type: 'play', name: startMatch[1].trim() }; lineText = lineText.replace(/\[\[bgm-start\s*:\s*(.*?)\s*\]\]/gi, ""); }
 
-                        // [New] Scene Video 파싱: {{scene-m:URL}}
                         const videoMatch = lineText.match(/\{\{scene-m\s*:\s*(.*?)\}\}/i);
                         if (videoMatch) {
                             lineVideo = videoMatch[1].trim();
@@ -744,7 +867,7 @@ jQuery(document).ready(function () {
                             img: imgToUse, 
                             bg: tempActiveBg,
                             bgm: lineBgm,
-                            video: lineVideo, // [New]
+                            video: lineVideo, 
                             choices: myChoices 
                         });
                     });
@@ -769,12 +892,9 @@ jQuery(document).ready(function () {
         }, 100);
     });
     $('#vn-overlay').on('click', '#vn-user-sprite-toggle', function(e) { stopProp(e); ENABLE_USER_SPRITE = !ENABLE_USER_SPRITE; localStorage.setItem('vnModeUserSprite', ENABLE_USER_SPRITE); updateToggleButtonState(); $('#vn-sprite-layer').empty(); currentLeftSrc = ""; currentRightSrc = ""; setTimeout(checkLastMessage, 100); });
-    $(document).on('click', '#vn-toggle-btn', toggleVNMode);
     $('#vn-overlay').on('click', function (e) {
         if ($(e.target).closest('#vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container, .vn-choice-btn, #vn-video-layer').length > 0) return;
         if (lastUserPrompt !== "" || $('#vn-text-content').text() === "...") return;
-        
-        // 비디오 레이어가 떠 있으면 클릭 무시 (스킵 버튼으로만 제어)
         if ($('#vn-video-layer').css('display') !== 'none') return;
 
         if (isTyping) { 
@@ -822,7 +942,7 @@ jQuery(document).ready(function () {
         window.vnTranslationDebounce = setTimeout(() => checkLastMessage(), 300);
     });
     translationObserver.observe(document.getElementById('chat'), { childList: true, subtree: true, characterData: true });
-    console.log("[VN Mode] v5.8.0 Loaded.");
+    console.log("[VN Mode] v5.9.0 Loaded.");
 });
 
 // ======================================================
@@ -866,8 +986,14 @@ jQuery(document).ready(function () {
     function injectSpriteSliders() {
         const panel = document.getElementById('vn-preset-panel'); if (!panel) return;
         if (document.getElementById('vn-sprite-sliders-area')) return;
-        const sliderArea = document.createElement('div'); sliderArea.id = 'vn-sprite-sliders-area'; sliderArea.className = 'vn-sprite-settings-group';
+        
+        const sliderArea = document.createElement('div'); 
+        sliderArea.id = 'vn-sprite-sliders-area'; 
+        sliderArea.className = 'vn-sprite-settings-group';
+        
         const s = getSettings();
+        
+        // HTML 생성 부분
         let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h5 style="margin:0;">🎨 레이아웃 설정</h5><button id="vn-reset-settings-btn" style="background:#607D8B; color:white; border:none; border-radius:4px; padding:3px 8px; font-size:0.75em; cursor:pointer;">🔄 초기화</button></div>`;
         html += `<div style="margin-bottom:10px; font-size:0.85em; color:#0288D1; font-weight:bold;">[💬 대화창]</div>`;
         html += createSliderHTML('vn-dialog-y-slider', '↕ 상하 (Bottom)', 0, 800, 10, s.dialogY, 'px');
@@ -875,7 +1001,7 @@ jQuery(document).ready(function () {
         html += createSliderHTML('vn-dialog-w-slider', '📏 너비 (Width)', 20, 100, 1, s.dialogW, '%');
         html += createSliderHTML('vn-dialog-h-slider', '📐 높이 (Height)', 100, 1200, 10, s.dialogH, 'px');
         html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#7B1FA2; font-weight:bold;">[캐릭터]</div>`;
-        html += createSliderHTML('vn-char-scale-slider', '크기', 0.2, 3.0, 0.05, s.charScale, 'x');
+        html += createSliderHTML('vn-char-scale-slider', '크기', 0.2, 3.0, 0.05, s.charScale, 'x'); 
         html += createSliderHTML('vn-char-x-slider', '가로 위치', -800, 800, 10, s.charX);
         html += createSliderHTML('vn-char-y-slider', '세로 위치', -500, 500, 10, s.charY);
         html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#388E3C; font-weight:bold;">[유저]</div>`;
@@ -884,16 +1010,34 @@ jQuery(document).ready(function () {
         html += createSliderHTML('vn-user-y-slider', '세로 위치', -500, 500, 10, s.userY);
         html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#E91E63; font-weight:bold;">[초상화]</div>`;
         html += createSliderHTML('vn-portrait-size-slider', '박스 크기', 50, 400, 5, s.portraitSize, 'px');
-        sliderArea.innerHTML = html; panel.appendChild(sliderArea);
+        
+        sliderArea.innerHTML = html; 
+        panel.appendChild(sliderArea);
 
         const bindSlider = (id, varName, storageKey, unit='') => {
-            const el = document.getElementById(id); const valEl = document.getElementById(id + '-val');
-            if(el) { el.addEventListener('input', (e) => { setVar(varName, e.target.value, unit); valEl.innerText = e.target.value + unit; localStorage.setItem(storageKey, e.target.value); }); }
+            const el = document.getElementById(id); 
+            const valEl = document.getElementById(id + '-val');
+            if(el) { 
+                el.addEventListener('input', (e) => { 
+                    setVar(varName, e.target.value, unit); 
+                    let displayUnit = unit;
+                    if (unit === '' && varName.includes('scale')) displayUnit = 'x'; 
+                    valEl.innerText = e.target.value + displayUnit; 
+                    localStorage.setItem(storageKey, e.target.value); 
+                }); 
+            }
         };
-        bindSlider('vn-dialog-y-slider', '--vn-dialog-y', 'vnModeDialogY', 'px'); bindSlider('vn-dialog-x-slider', '--vn-dialog-x', 'vnModeDialogX', 'px');
-        bindSlider('vn-dialog-w-slider', '--vn-dialog-w', 'vnModeDialogW', '%'); bindSlider('vn-dialog-h-slider', '--vn-dialog-h', 'vnModeDialogH', 'px');
-        bindSlider('vn-char-scale-slider', '--vn-char-scale', 'vnModeCharScale', 'x'); bindSlider('vn-char-x-slider', '--vn-char-x', 'vnModeCharX', 'px'); bindSlider('vn-char-y-slider', '--vn-char-y', 'vnModeCharY', 'px');
-        bindSlider('vn-user-scale-slider', '--vn-user-scale', 'vnModeUserScale', 'x'); bindSlider('vn-user-x-slider', '--vn-user-x', 'vnModeUserX', 'px'); bindSlider('vn-user-y-slider', '--vn-user-y', 'vnModeUserY', 'px');
+
+        bindSlider('vn-dialog-y-slider', '--vn-dialog-y', 'vnModeDialogY', 'px'); 
+        bindSlider('vn-dialog-x-slider', '--vn-dialog-x', 'vnModeDialogX', 'px');
+        bindSlider('vn-dialog-w-slider', '--vn-dialog-w', 'vnModeDialogW', '%'); 
+        bindSlider('vn-dialog-h-slider', '--vn-dialog-h', 'vnModeDialogH', 'px');
+        bindSlider('vn-char-scale-slider', '--vn-char-scale', 'vnModeCharScale', ''); 
+        bindSlider('vn-char-x-slider', '--vn-char-x', 'vnModeCharX', 'px'); 
+        bindSlider('vn-char-y-slider', '--vn-char-y', 'vnModeCharY', 'px');
+        bindSlider('vn-user-scale-slider', '--vn-user-scale', 'vnModeUserScale', ''); 
+        bindSlider('vn-user-x-slider', '--vn-user-x', 'vnModeUserX', 'px'); 
+        bindSlider('vn-user-y-slider', '--vn-user-y', 'vnModeUserY', 'px');
         bindSlider('vn-portrait-size-slider', '--vn-portrait-size', 'vnModePortraitSize', 'px');
 
         document.getElementById('vn-reset-settings-btn').addEventListener('click', (e) => {
@@ -906,3 +1050,5 @@ jQuery(document).ready(function () {
     }
     setInterval(() => { injectSpriteSliders(); const sprites = document.querySelectorAll('.vn-character-sprite'); sprites.forEach(img => { if (img.src && (img.src.includes('user') || img.src.includes('User') || img.src.includes('avatar'))) { if (!img.classList.contains('vn-user-sprite')) img.classList.add('vn-user-sprite'); } }); }, 2000);
 })();
+
+ 
