@@ -1,6 +1,6 @@
-// VN Mode Script v5.4.1 - Auto Name Parsing & Label Support + BG Prefix Fix
+// VN Mode Script v5.8.0 - Scene Video Support Added
 jQuery(document).ready(function () {
-    console.log("[VN Mode] Loading Extension v5.4.1 (BG Detection Updated)...");
+    console.log("[VN Mode] Loading Extension v5.8.0 (Scene Video Support)...");
 
     // [상태 변수]
     let isVnModeOn = false;
@@ -20,7 +20,6 @@ jQuery(document).ready(function () {
     // BGM 관련 변수
     let bgmPlaylist = JSON.parse(localStorage.getItem('vnModeBgmPlaylist') || '[]'); 
     let bgmPresets = JSON.parse(localStorage.getItem('vnModeBgmPresets') || '{}');
-
     let bgmAudio = new Audio();
     let isBgmPlaying = false;
     let currentBgmIndex = -1;
@@ -38,7 +37,7 @@ jQuery(document).ready(function () {
     let currentBgSrc = "";
 
     // -------------------------------------------------------
-    // [0] 테마 프리셋 정의 (이름표 #vn-name-label 스타일 추가됨)
+    // [0] 테마 프리셋 정의
     // -------------------------------------------------------
     const DEFAULT_PRESETS = {
         'default': `
@@ -65,13 +64,20 @@ jQuery(document).ready(function () {
     };
 
     // -------------------------------------------------------
-    // [1] HTML UI 생성 (#vn-name-label 추가됨)
+    // [1] HTML UI 생성
     // -------------------------------------------------------
     const htmlTemplate = `
         <div id="vn-overlay">
             <div id="vn-background-layer"></div>
             <div id="vn-sprite-layer"></div>
             
+            <div id="vn-choice-area"></div>
+
+            <div id="vn-video-layer" style="display:none;">
+                <video id="vn-scene-video" style="width:100%; height:100%; object-fit:cover; background:#000;" playsinline></video>
+                <div id="vn-video-skip" title="Click to Skip">SKIP >></div>
+            </div>
+
             <div id="vn-settings-area">
                 <div id="vn-user-sprite-toggle" class="vn-top-btn" title="유저 이미지 ON/OFF"></div>
                 <div id="vn-portrait-mode-toggle" class="vn-top-btn" title="초상화 모드 (Stardew Style)">🖼️ Portrait</div>
@@ -169,6 +175,67 @@ jQuery(document).ready(function () {
                 <div id="vn-indicator"></div>
             </div>
         </div>
+        
+        <style>
+            /* ★ 선택지 스타일 (화면 전체 오버레이) */
+            #vn-choice-area {
+                display: none; 
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.6); z-index: 100; pointer-events: auto;
+                flex-direction: column; justify-content: center; align-items: center; gap: 15px;
+                backdrop-filter: blur(2px);
+            }
+            .vn-choice-btn {
+                padding: 18px 30px; width: 70%; max-width: 700px;
+                background: #fff; border: 3px solid #f2a900; border-radius: 35px;
+                color: #444; font-size: 1.2em; font-weight: bold; text-align: center;
+                cursor: pointer; transition: all 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                font-family: 'Jua', sans-serif;
+            }
+            .vn-choice-btn:hover {
+                transform: scale(1.03); background: #fff8e1; border-color: #ff8f00;
+            }
+            /* 직접 입력 버튼 스타일 */
+            .vn-choice-btn.direct-input {
+                background: #eee; border-color: #bbb; color: #666; margin-top: 15px; font-size: 1.1em;
+            }
+            .vn-choice-btn.direct-input:hover {
+                background: #e0e0e0; border-color: #999; color: #333;
+            }
+
+            /* [수정] 효과 다 뺀 CSS */
+#vn-video-layer {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 999999;
+    background: #000;
+    display: none; /* 기본 숨김 */
+    /* transition, opacity 줄 삭제함 */
+}
+
+#vn-scene-video {
+    width: 100%; height: 100%; 
+    object-fit: cover; 
+    /* transition, opacity 줄 삭제함 */
+}
+
+#vn-video-skip {
+    /* 기존 스타일 유지 */
+    position: absolute; bottom: 30px; right: 30px;
+    color: rgba(255,255,255,0.5); font-size: 1.2em; font-weight: bold;
+    cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
+    padding: 5px 15px; border-radius: 20px;
+    z-index: 1000000; transition: 0.3s;
+}
+#vn-video-skip:hover { color: #fff; border-color: #fff; background: rgba(0,0,0,0.5); }
+            #vn-video-skip {
+                position: absolute; bottom: 30px; right: 30px;
+                color: rgba(255,255,255,0.5); font-size: 1.2em; font-weight: bold;
+                cursor: pointer; border: 1px solid rgba(255,255,255,0.3);
+                padding: 5px 15px; border-radius: 20px;
+                z-index: 1000000; transition: 0.3s;
+            }
+            #vn-video-skip:hover { color: #fff; border-color: #fff; background: rgba(0,0,0,0.5); }
+        </style>
     `;
 
     if ($('#vn-overlay').length === 0) { $('body').append(htmlTemplate); }
@@ -176,64 +243,37 @@ jQuery(document).ready(function () {
     if ($('#vn-mode-theme-css').length === 0) { $('<style id="vn-mode-theme-css">').appendTo('head'); }
 
     // -------------------------------------------------------
-    // [3] 함수 및 로직
+    // [3] 기본 함수들
     // -------------------------------------------------------
-
-    // ★ [신규] 파일명에서 이름 추출
     function extractNameFromSrc(src) {
         if (!src) return "";
         try {
-            // 1. 경로 제거
             const filename = decodeURIComponent(src.substring(src.lastIndexOf('/') + 1));
-            // 2. 확장자 제거
             const namePart = filename.split('.')[0];
-            // 3. '-' 분리
             const parts = namePart.split('-');
-            
             let rawName = "";
-            if (parts[0].toLowerCase() === 'user' && parts.length > 1) {
-                // user-reika_smile -> reika
-                rawName = parts[1].split('_')[0]; 
-            } else {
-                // yui-smile -> yui
-                rawName = parts[0].split('_')[0];
-            }
-
-            // 4. 대문자 변환
-            if (rawName.length > 0) {
-                return rawName.charAt(0).toUpperCase() + rawName.slice(1);
-            }
+            if (parts[0].toLowerCase() === 'user' && parts.length > 1) { rawName = parts[1].split('_')[0]; } 
+            else { rawName = parts[0].split('_')[0]; }
+            if (rawName.length > 0) { return rawName.charAt(0).toUpperCase() + rawName.slice(1); }
             return "";
-        } catch (e) {
-            console.error("VN Mode Name Parse Error:", e);
-            return "";
-        }
+        } catch (e) { console.error("VN Mode Name Parse Error:", e); return ""; }
     }
 
-    // ★ [신규] 이름표 업데이트
     function updateNameLabel(src) {
         const name = extractNameFromSrc(src);
         const $label = $('#vn-name-label');
-        if (name) {
-            $label.text(name).fadeIn(200);
-        } else {
-            $label.text("Talk"); // 기본값
-        }
+        if (name) { $label.text(name).fadeIn(200); } else { $label.text("Talk"); }
     }
 
     function applyFontSize(size) {
-        size = parseFloat(size);
-        if (isNaN(size)) return;
+        size = parseFloat(size); if (isNaN(size)) return;
         $('#vn-text-content').css('font-size', size + 'em');
-        $('#vn-font-size-slider').val(size);
-        $('#vn-font-size-input').val(size);
-        CURRENT_FONT_SIZE = size;
-        localStorage.setItem('vnModeFontSize', size);
+        $('#vn-font-size-slider').val(size); $('#vn-font-size-input').val(size);
+        CURRENT_FONT_SIZE = size; localStorage.setItem('vnModeFontSize', size);
     }
 
     function updateThemeSelect() {
-        const $select = $('#vn-theme-select');
-        $select.empty();
+        const $select = $('#vn-theme-select'); $select.empty();
         $select.append('<optgroup label="-- Basic --"></optgroup>');
         $select.append(new Option("Animal Crossing (Default)", "default"));
         $select.append(new Option("Cyber Dark", "dark"));
@@ -245,53 +285,41 @@ jQuery(document).ready(function () {
         $select.append('<optgroup label="-- Edit --"></optgroup>');
         $select.append(new Option("📝 Write New / Edit CSS", "custom_draft"));
         
-        if(CURRENT_THEME && (DEFAULT_PRESETS[CURRENT_THEME] || customThemes[CURRENT_THEME] || CURRENT_THEME === 'custom_draft')) {
-            $select.val(CURRENT_THEME);
-        } else { $select.val('default'); }
+        if(CURRENT_THEME && (DEFAULT_PRESETS[CURRENT_THEME] || customThemes[CURRENT_THEME] || CURRENT_THEME === 'custom_draft')) { $select.val(CURRENT_THEME); } else { $select.val('default'); }
     }
 
     function applyTheme(themeKey) {
         let cssToApply = "";
-        const $customArea = $('#vn-custom-css-area');
-        const $delBtn = $('#vn-delete-custom-btn');
-        const $nameInput = $('#vn-new-preset-name');
-        const $textArea = $('#vn-custom-css-input');
-        const $controls = $('#vn-preset-controls-box');
+        const $customArea = $('#vn-custom-css-area'); const $delBtn = $('#vn-delete-custom-btn');
+        const $nameInput = $('#vn-new-preset-name'); const $textArea = $('#vn-custom-css-input'); const $controls = $('#vn-preset-controls-box');
 
         if (DEFAULT_PRESETS[themeKey]) {
             cssToApply = DEFAULT_PRESETS[themeKey];
             $textArea.val(cssToApply).prop('readonly', true).css('opacity', '0.7'); $controls.hide(); 
         } else if (customThemes[themeKey]) {
-            cssToApply = customThemes[themeKey];
-            $customArea.show();
+            cssToApply = customThemes[themeKey]; $customArea.show();
             $textArea.val(cssToApply).prop('readonly', false).css('opacity', '1');
             $nameInput.val(themeKey); $delBtn.show(); $controls.show();
         } else if (themeKey === 'custom_draft') {
-            cssToApply = SAVED_CUSTOM_CSS_DRAFT;
-            $customArea.show();
+            cssToApply = SAVED_CUSTOM_CSS_DRAFT; $customArea.show();
             $textArea.val(cssToApply).prop('readonly', false).css('opacity', '1');
             $nameInput.val(''); $delBtn.hide(); $controls.show();
         } else { cssToApply = DEFAULT_PRESETS['default']; }
 
-        $('#vn-mode-theme-css').text(cssToApply);
-        $('#vn-theme-select').val(themeKey);
+        $('#vn-mode-theme-css').text(cssToApply); $('#vn-theme-select').val(themeKey);
         localStorage.setItem('vnModeTheme', themeKey);
     }
 
     function updatePortraitToggleState() {
-        const $btn = $('#vn-portrait-mode-toggle');
-        const $dialog = $('#vn-dialog-box');
-        const $spriteLayer = $('#vn-sprite-layer');
-        const $portraitBox = $('#vn-portrait-box');
+        const $btn = $('#vn-portrait-mode-toggle'); const $dialog = $('#vn-dialog-box');
+        const $spriteLayer = $('#vn-sprite-layer'); const $portraitBox = $('#vn-portrait-box');
 
         if (ENABLE_PORTRAIT_MODE) {
             $btn.removeClass('off').addClass('on').css({'background-color':'#009688', 'border-color':'#00796B'});
-            $dialog.addClass('vn-portrait-mode-active');
-            $spriteLayer.hide(); $portraitBox.show();
+            $dialog.addClass('vn-portrait-mode-active'); $spriteLayer.hide(); $portraitBox.show();
         } else {
             $btn.removeClass('on').addClass('off').css({'background-color':'#607D8B', 'border-color':'#455A64'});
-            $dialog.removeClass('vn-portrait-mode-active');
-            $spriteLayer.show(); $portraitBox.hide();
+            $dialog.removeClass('vn-portrait-mode-active'); $spriteLayer.show(); $portraitBox.hide();
         }
     }
 
@@ -321,9 +349,8 @@ jQuery(document).ready(function () {
     // -------------------------------------------------------
     bgmAudio.addEventListener('ended', function() { if (bgmLoopMode === 1) { bgmAudio.currentTime = 0; bgmAudio.play(); } else { playNext(true); } });
     function renderPlaylist() {
-        const $list = $('#vn-bgm-list');
-        $list.empty();
-        if (bgmPlaylist.length === 0) { $list.append('<li style="color:#aaa; justify-content:center;">No music added.</li>'); return; }
+        const $list = $('#vn-bgm-list'); $list.empty();
+        if (bgmPlaylist.length === 0) { $list.append('<li style="color:#aaa; text-align:center;">No music added.</li>'); return; }
         bgmPlaylist.forEach((track, index) => {
             const activeClass = (index === currentBgmIndex) ? 'active' : '';
             const icon = (index === currentBgmIndex && isBgmPlaying) ? '<i class="fa-solid fa-volume-high"></i> ' : '<i class="fa-solid fa-music"></i> ';
@@ -335,8 +362,7 @@ jQuery(document).ready(function () {
         });
     }
     function updateBgmPresetUI() {
-        const $select = $('#vn-bgm-preset-select');
-        $select.empty(); $select.append('<option value="">-- Select Preset --</option>');
+        const $select = $('#vn-bgm-preset-select'); $select.empty(); $select.append('<option value="">-- Select Preset --</option>');
         for (let name in bgmPresets) { const count = bgmPresets[name] ? bgmPresets[name].length : 0; $select.append(new Option(`${name} (${count} tracks)`, name)); }
     }
     function playBgm(index) {
@@ -377,127 +403,39 @@ jQuery(document).ready(function () {
             if (currentBgmIndex > index) currentBgmIndex--; renderPlaylist();
         }
     }
-    
     renderPlaylist(); updateBgmUI(); updateBgmPresetUI(); 
 
     // -------------------------------------------------------
     // [4] 이벤트 리스너
     // -------------------------------------------------------
     function stopProp(e) { e.stopPropagation(); }
-
-    $('#vn-overlay').on('click', '#vn-portrait-mode-toggle', function(e) {
-        stopProp(e);
-        ENABLE_PORTRAIT_MODE = !ENABLE_PORTRAIT_MODE;
-        localStorage.setItem('vnModePortrait', ENABLE_PORTRAIT_MODE);
-        updatePortraitToggleState();
-        setTimeout(checkLastMessage, 100);
-    });
-
+    $('#vn-overlay').on('click', '#vn-portrait-mode-toggle', function(e) { stopProp(e); ENABLE_PORTRAIT_MODE = !ENABLE_PORTRAIT_MODE; localStorage.setItem('vnModePortrait', ENABLE_PORTRAIT_MODE); updatePortraitToggleState(); setTimeout(checkLastMessage, 100); });
     $('#vn-overlay').on('click', '#vn-bgm-toggle-btn', function(e) { stopProp(e); $('#vn-bgm-panel').fadeToggle(100); });
     $('#vn-overlay').on('click', '#vn-bgm-panel', stopProp);
-    $('#vn-overlay').on('click', '#vn-bgm-play-pause', function(e) {
-        stopProp(e);
-        if (currentBgmIndex === -1 && bgmPlaylist.length > 0) playBgm(0);
-        else if (currentBgmIndex !== -1) { if (bgmAudio.paused) { bgmAudio.play(); isBgmPlaying = true; } else { bgmAudio.pause(); isBgmPlaying = false; } updateBgmUI(); }
-    });
+    $('#vn-overlay').on('click', '#vn-bgm-play-pause', function(e) { stopProp(e); if (currentBgmIndex === -1 && bgmPlaylist.length > 0) playBgm(0); else if (currentBgmIndex !== -1) { if (bgmAudio.paused) { bgmAudio.play(); isBgmPlaying = true; } else { bgmAudio.pause(); isBgmPlaying = false; } updateBgmUI(); } });
     $('#vn-overlay').on('click', '#vn-bgm-prev', function(e) { stopProp(e); playPrev(); });
     $('#vn-overlay').on('click', '#vn-bgm-next', function(e) { stopProp(e); playNext(); });
     $('#vn-overlay').on('click', '#vn-bgm-shuffle', function(e) { stopProp(e); bgmShuffle = !bgmShuffle; updateBgmUI(); });
     $('#vn-overlay').on('click', '#vn-bgm-loop', function(e) { stopProp(e); bgmLoopMode = (bgmLoopMode + 1) % 3; updateBgmUI(); });
     $('#vn-overlay').on('input', '#vn-bgm-volume', function(e) { stopProp(e); bgmAudio.volume = $(this).val(); });
     $('#vn-overlay').on('click', '#vn-bgm-volume', stopProp);
-    $('#vn-overlay').on('click', '#vn-bgm-add-btn', function(e) {
-        stopProp(e);
-        const name = $('#vn-bgm-name-input').val().trim(); const url = $('#vn-bgm-url-input').val().trim();
-        if (!name || !url) { if(window.toastr) toastr.warning("Enter name and URL."); return; }
-        bgmPlaylist.push({ name: name, url: url }); localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist));
-        $('#vn-bgm-name-input').val(''); $('#vn-bgm-url-input').val(''); renderPlaylist();
-    });
+    $('#vn-overlay').on('click', '#vn-bgm-add-btn', function(e) { stopProp(e); const name = $('#vn-bgm-name-input').val().trim(); const url = $('#vn-bgm-url-input').val().trim(); if (!name || !url) { if(window.toastr) toastr.warning("Enter name and URL."); return; } bgmPlaylist.push({ name: name, url: url }); localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist)); $('#vn-bgm-name-input').val(''); $('#vn-bgm-url-input').val(''); renderPlaylist(); });
     $('#vn-overlay').on('click', '.vn-bgm-inputs', stopProp);
-    $('#vn-overlay').on('click', '#vn-bgm-save-preset', function(e) {
-        stopProp(e);
-        if (bgmPlaylist.length === 0) { if(window.toastr) toastr.warning("Playlist is empty."); return; }
-        const name = prompt("Enter preset name to save current playlist:");
-        if (!name || name.trim() === "") return;
-        bgmPresets[name] = JSON.parse(JSON.stringify(bgmPlaylist));
-        localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets));
-        updateBgmPresetUI(); $('#vn-bgm-preset-select').val(name); if(window.toastr) toastr.success(`Playlist "${name}" Saved!`);
-    });
-    $('#vn-overlay').on('click', '#vn-bgm-load-preset', function(e) {
-        stopProp(e);
-        const name = $('#vn-bgm-preset-select').val();
-        if (!name || !bgmPresets[name]) return;
-        if (bgmPlaylist.length > 0 && !confirm(`Replace current playlist with "${name}"?`)) return;
-        stopBgm(); bgmPlaylist = JSON.parse(JSON.stringify(bgmPresets[name])); currentBgmIndex = -1;
-        localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist)); renderPlaylist(); if(window.toastr) toastr.success(`Loaded "${name}"`);
-    });
-    $('#vn-overlay').on('click', '#vn-bgm-del-preset', function(e) {
-        stopProp(e);
-        const name = $('#vn-bgm-preset-select').val();
-        if (!name || !bgmPresets[name]) return;
-        if (confirm(`Delete preset "${name}"?`)) { delete bgmPresets[name]; localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets)); updateBgmPresetUI(); if(window.toastr) toastr.info("Preset deleted."); }
-    });
-    $('#vn-overlay').on('click', '#vn-bgm-preset-export', function(e) {
-        stopProp(e);
-        const blob = new Blob([JSON.stringify(bgmPresets, null, 2)], {type: "application/json"});
-        const url = URL.createObjectURL(blob); const a = document.createElement('a');
-        a.href = url; a.download = 'vn_bgm_library.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    });
+    $('#vn-overlay').on('click', '#vn-bgm-save-preset', function(e) { stopProp(e); if (bgmPlaylist.length === 0) { if(window.toastr) toastr.warning("Playlist is empty."); return; } const name = prompt("Enter preset name:"); if (!name || name.trim() === "") return; bgmPresets[name] = JSON.parse(JSON.stringify(bgmPlaylist)); localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets)); updateBgmPresetUI(); $('#vn-bgm-preset-select').val(name); if(window.toastr) toastr.success(`Playlist "${name}" Saved!`); });
+    $('#vn-overlay').on('click', '#vn-bgm-load-preset', function(e) { stopProp(e); const name = $('#vn-bgm-preset-select').val(); if (!name || !bgmPresets[name]) return; if (bgmPlaylist.length > 0 && !confirm(`Replace with "${name}"?`)) return; stopBgm(); bgmPlaylist = JSON.parse(JSON.stringify(bgmPresets[name])); currentBgmIndex = -1; localStorage.setItem('vnModeBgmPlaylist', JSON.stringify(bgmPlaylist)); renderPlaylist(); if(window.toastr) toastr.success(`Loaded "${name}"`); });
+    $('#vn-overlay').on('click', '#vn-bgm-del-preset', function(e) { stopProp(e); const name = $('#vn-bgm-preset-select').val(); if (!name || !bgmPresets[name]) return; if (confirm(`Delete "${name}"?`)) { delete bgmPresets[name]; localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets)); updateBgmPresetUI(); if(window.toastr) toastr.info("Preset deleted."); } });
+    $('#vn-overlay').on('click', '#vn-bgm-preset-export', function(e) { stopProp(e); const blob = new Blob([JSON.stringify(bgmPresets, null, 2)], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'vn_bgm_library.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); });
     $('#vn-overlay').on('click', '#vn-bgm-preset-import', function(e) { stopProp(e); $('#vn-bgm-preset-file').click(); });
-    $('#vn-overlay').on('change', '#vn-bgm-preset-file', function(e) {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const imported = JSON.parse(e.target.result);
-                if (typeof imported !== 'object' || Array.isArray(imported)) throw new Error("Invalid format");
-                if (confirm("Merge with existing presets? (Cancel to Overwrite)")) { bgmPresets = { ...bgmPresets, ...imported }; } else { bgmPresets = imported; }
-                localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets)); updateBgmPresetUI(); if(window.toastr) toastr.success("Preset library updated!");
-            } catch (err) { if(window.toastr) toastr.error("Invalid JSON file."); }
-        }; reader.readAsText(file); $(this).val('');
-    });
-
+    $('#vn-overlay').on('change', '#vn-bgm-preset-file', function(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const imported = JSON.parse(e.target.result); if (typeof imported !== 'object' || Array.isArray(imported)) throw new Error("Invalid format"); if (confirm("Merge?")) { bgmPresets = { ...bgmPresets, ...imported }; } else { bgmPresets = imported; } localStorage.setItem('vnModeBgmPresets', JSON.stringify(bgmPresets)); updateBgmPresetUI(); if(window.toastr) toastr.success("Library updated!"); } catch (err) { if(window.toastr) toastr.error("Invalid JSON."); } }; reader.readAsText(file); $(this).val(''); });
     $('#vn-overlay').on('input', '#vn-font-size-slider', function() { applyFontSize($(this).val()); });
     $('#vn-overlay').on('change keyup', '#vn-font-size-input', function() { applyFontSize($(this).val()); });
     $('#vn-overlay').on('change', '#vn-theme-select', function() { applyTheme($(this).val()); });
-    $('#vn-overlay').on('click', '#vn-save-custom-btn', function(e) {
-        stopProp(e);
-        const name = $('#vn-new-preset-name').val().trim(); const css = $('#vn-custom-css-input').val();
-        if (!name) return; if (['default', 'dark', 'modern', 'custom_draft'].includes(name)) { alert("Reserved name."); return; }
-        customThemes[name] = css; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); applyTheme(name); if(window.toastr) toastr.success(`Theme "${name}" Saved!`);
-    });
-    $('#vn-overlay').on('click', '#vn-delete-custom-btn', function(e) {
-        stopProp(e);
-        const name = $('#vn-new-preset-name').val().trim();
-        if (customThemes[name] && confirm(`Delete theme "${name}"?`)) { delete customThemes[name]; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); applyTheme('default'); if(window.toastr) toastr.info(`Theme Deleted.`); }
-    });
-    $('#vn-overlay').on('click', '#vn-apply-btn', function(e) {
-        stopProp(e);
-        const currentVal = $('#vn-theme-select').val();
-        if (DEFAULT_PRESETS[currentVal]) { $('#vn-mode-theme-css').text(DEFAULT_PRESETS[currentVal]); if(window.toastr) toastr.success(`Preset "${currentVal}" Applied!`); $('#vn-preset-panel').hide(); return; }
-        const css = $('#vn-custom-css-input').val();
-        if (currentVal === 'custom_draft') { SAVED_CUSTOM_CSS_DRAFT = css; localStorage.setItem('vnModeCustomCSS', css); } 
-        else if (customThemes[currentVal]) { customThemes[currentVal] = css; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); }
-        $('#vn-mode-theme-css').text(css); if(window.toastr) toastr.success('Custom CSS Applied!'); $('#vn-preset-panel').hide();
-    });
-
-    $('#vn-overlay').on('click', '#vn-export-btn', function(e) {
-        stopProp(e);
-        const blob = new Blob([JSON.stringify(customThemes, null, 2)], {type: "application/json"});
-        const url = URL.createObjectURL(blob); const a = document.createElement('a');
-        a.href = url; a.download = 'vn_mode_themes.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    });
+    $('#vn-overlay').on('click', '#vn-save-custom-btn', function(e) { stopProp(e); const name = $('#vn-new-preset-name').val().trim(); const css = $('#vn-custom-css-input').val(); if (!name) return; if (['default', 'dark', 'modern', 'custom_draft'].includes(name)) { alert("Reserved name."); return; } customThemes[name] = css; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); applyTheme(name); if(window.toastr) toastr.success(`Theme "${name}" Saved!`); });
+    $('#vn-overlay').on('click', '#vn-delete-custom-btn', function(e) { stopProp(e); const name = $('#vn-new-preset-name').val().trim(); if (customThemes[name] && confirm(`Delete?`)) { delete customThemes[name]; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); applyTheme('default'); if(window.toastr) toastr.info(`Deleted.`); } });
+    $('#vn-overlay').on('click', '#vn-apply-btn', function(e) { stopProp(e); const currentVal = $('#vn-theme-select').val(); if (DEFAULT_PRESETS[currentVal]) { $('#vn-mode-theme-css').text(DEFAULT_PRESETS[currentVal]); if(window.toastr) toastr.success(`Applied!`); $('#vn-preset-panel').hide(); return; } const css = $('#vn-custom-css-input').val(); if (currentVal === 'custom_draft') { SAVED_CUSTOM_CSS_DRAFT = css; localStorage.setItem('vnModeCustomCSS', css); } else if (customThemes[currentVal]) { customThemes[currentVal] = css; localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); } $('#vn-mode-theme-css').text(css); if(window.toastr) toastr.success('Applied!'); $('#vn-preset-panel').hide(); });
+    $('#vn-overlay').on('click', '#vn-export-btn', function(e) { stopProp(e); const blob = new Blob([JSON.stringify(customThemes, null, 2)], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'vn_mode_themes.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); });
     $('#vn-overlay').on('click', '#vn-import-btn', function(e) { stopProp(e); $('#vn-import-input').click(); });
-    $('#vn-overlay').on('change', '#vn-import-input', function(e) {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const imported = JSON.parse(e.target.result);
-                customThemes = Object.assign({}, customThemes, imported); localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); if(window.toastr) toastr.success("Themes Imported!");
-            } catch (err) { alert("Invalid JSON."); }
-        }; reader.readAsText(file);
-    });
+    $('#vn-overlay').on('change', '#vn-import-input', function(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const imported = JSON.parse(e.target.result); customThemes = Object.assign({}, customThemes, imported); localStorage.setItem('vnModeCustomThemes', JSON.stringify(customThemes)); updateThemeSelect(); if(window.toastr) toastr.success("Themes Imported!"); } catch (err) { alert("Invalid JSON."); } }; reader.readAsText(file); });
     $('#vn-overlay').on('click', '#vn-preset-toggle-btn', function(e) { stopProp(e); $('#vn-preset-panel').toggle(); });
     $('#vn-overlay').on('click', '#vn-preset-panel', stopProp);
 
@@ -506,38 +444,172 @@ jQuery(document).ready(function () {
     // -------------------------------------------------------
     function openVN(dataArray) {
         if (!isVnModeOn) return;
-        $('#vn-input-area').hide(); $('#vn-text-content').show(); $('#vn-indicator').show();
+        // 리셋
+        $('#vn-input-area').hide(); 
+        $('#vn-text-content').show(); 
+        $('#vn-indicator').show();
+        $('#vn-choice-area').empty().hide(); // 선택지 초기화
+
         vnParagraphs = (dataArray && dataArray.length > 0) ? dataArray : [{ text: "...", img: null, bg: null }];
-        vnStep = 0; renderText();
+        vnStep = 0; 
+        renderText();
     }
+
     function renderText() {
+        if (vnStep >= vnParagraphs.length) return; 
+
         const currentData = vnParagraphs[vnStep];
+        
+        // 1. 배경/스프라이트
         if (currentData.bg) changeBackground(currentData.bg);
         if (currentData.img) changeSprite(currentData.img);
-        typeText(currentData.text);
+
+        // 2. BGM
+        if (currentData.bgm) {
+            if (currentData.bgm.type === 'stop') { stopBgm(); console.log("[VN Mode] 🛑 BGM Stopped via tag."); } 
+            else if (currentData.bgm.type === 'play') {
+                const targetName = currentData.bgm.name.toLowerCase();
+                const foundIndex = bgmPlaylist.findIndex(track => track.name.toLowerCase() === targetName);
+                if (foundIndex !== -1) { playBgm(foundIndex); console.log(`[VN Mode] 🎵 Auto-playing BGM: ${currentData.bgm.name}`); } 
+                else { console.warn(`[VN Mode] ❌ BGM not found: ${currentData.bgm.name}`); }
+            }
+        }
+
+        // [New] 3. 동영상 씬 재생 로직 (텍스트 출력 전 가로채기)
+        if (currentData.video) {
+            console.log(`[VN Mode] 🎬 Playing Scene: ${currentData.video}`);
+            playSceneVideo(currentData.video, function() {
+                currentData.video = null; // 재생 완료 처리
+                renderText(); // 다시 호출해서 텍스트 출력 단계로 넘어감
+            });
+            return; // 여기서 함수 종료 (비디오 끝날 때까지 대기)
+        }
+
+        // 4. 빈 줄 스킵 (단, 선택지가 있다면 스킵하지 않음!)
+        const hasChoices = currentData.choices && currentData.choices.length > 0;
+        if ((!currentData.text || currentData.text.trim() === "") && !hasChoices) {
+            console.log("[VN Mode] Empty line. Skipping...");
+            vnStep++; 
+            if (vnStep < vnParagraphs.length) { setTimeout(renderText, 10); } 
+            else { finishStory(); }
+            return; 
+        }
+
+        // 5. 텍스트 출력
+        $('#vn-choice-area').empty().hide(); // 이전 선택지 숨김
+        typeText(currentData.text, currentData.choices);
     }
+
+    // [수정됨] 효과 없음: 즉시 재생, 즉시 종료
+    function playSceneVideo(url, callback) {
+        const $layer = $('#vn-video-layer');
+        const $video = $('#vn-scene-video');
+        const videoEl = $video[0];
+
+        // 1. 즉시 표시 및 재생
+        $video.attr('src', url);
+        $layer.css('display', 'block'); // display: block으로 바로 보이게
+        
+        videoEl.play().catch(e => {
+            console.error("Play error:", e);
+            closeVideo();
+        });
+
+        // 스킵 버튼
+        $('#vn-video-skip').off('click').one('click', function(e) {
+            e.stopPropagation();
+            closeVideo();
+        });
+
+        // 종료 이벤트
+        videoEl.onended = function() {
+            closeVideo();
+        };
+
+        function closeVideo() {
+            videoEl.onended = null;
+            
+            // 2. 즉시 숨김 및 종료
+            videoEl.pause();
+            $video.attr('src', ''); 
+            $layer.css('display', 'none'); // display: none으로 바로 숨김
+            
+            if (callback) callback();
+        }
+    }
+
+    function finishStory() {
+        $('#vn-text-content').hide(); 
+        $('#vn-indicator').hide(); 
+        $('#vn-input-area').css('display', 'flex'); 
+        $('#vn-user-input').focus();
+    }
+
     function changeBackground(src) {
         if (currentBgSrc === src) return;
         currentBgSrc = src; $('#vn-background-layer').css('background-image', `url('${src}')`);
     }
-    function typeText(text) {
+
+    function typeText(text, choices) {
         const $content = $('#vn-text-content');
         $content.text(''); currentFullText = text; isTyping = true; $('#vn-indicator').hide();
         if (typingTimer) clearTimeout(typingTimer);
+        
         let i = 0;
         function typeNext() {
-            if (i < text.length) { $content.text(text.substring(0, i + 1)); i++; typingTimer = setTimeout(typeNext, TYPE_SPEED); } 
-            else { isTyping = false; $('#vn-indicator').show(); }
+            if (i < text.length) { 
+                $content.text(text.substring(0, i + 1)); i++; 
+                typingTimer = setTimeout(typeNext, TYPE_SPEED); 
+            } else { 
+                isTyping = false; 
+                // 타이핑 끝난 후 선택지가 있으면 표시
+                if (choices && choices.length > 0) {
+                    showChoices(choices);
+                    $('#vn-indicator').hide(); 
+                } else {
+                    $('#vn-indicator').show(); 
+                }
+            }
         }
-        typeNext();
+        if (!text || text.length === 0) { isTyping = false; if(choices) showChoices(choices); }
+        else { typeNext(); }
     }
-    function changeSprite(src) {
-        // ★ [수정됨] background 뿐만 아니라 'bg-' 포함 파일도 스프라이트 처리에서 제외
-        if (!src || src.toLowerCase().includes('background-') || src.toLowerCase().includes('bg-')) return;
-        
-        // ★ 이름표 업데이트 호출
-        updateNameLabel(src);
 
+    // ★ [수정됨] 선택지 표시: 화면 중앙 Overlay + 직접 입력 추가
+    function showChoices(choices) {
+        const $area = $('#vn-choice-area');
+        $area.empty();
+        
+        // 1. 선택지 버튼 생성
+        choices.forEach(choiceText => {
+            const $btn = $('<div class="vn-choice-btn"></div>').text(choiceText);
+            $btn.on('click', function(e) {
+                e.stopPropagation(); 
+                // 숫자/점/공백 제거
+                const cleanText = choiceText.replace(/^\s*\d+[\.\)]\s*/, '');
+                sendUserMessage(cleanText); 
+            });
+            $area.append($btn);
+        });
+
+        // 2. "직접 입력하기" 버튼 추가 (항상)
+        const $directBtn = $('<div class="vn-choice-btn direct-input">✍️ 직접 입력하기</div>');
+        $directBtn.on('click', function(e) {
+            e.stopPropagation();
+            $area.hide(); // 선택지 숨김
+            $('#vn-text-content').hide(); // 텍스트 숨김
+            $('#vn-indicator').hide(); 
+            $('#vn-input-area').css('display', 'flex'); // 입력창 표시
+            $('#vn-user-input').focus(); // 포커스 이동
+        });
+        $area.append($directBtn);
+
+        $area.css('display', 'flex'); // Overlay 표시
+    }
+
+    function changeSprite(src) {
+        if (!src || src.toLowerCase().includes('background-') || src.toLowerCase().includes('bg-')) return;
+        updateNameLabel(src);
         const filename = src.substring(src.lastIndexOf('/') + 1).toLowerCase();
         const isUser = filename.startsWith('user') || filename.includes('avatar');
         if (!ENABLE_USER_SPRITE && isUser) return;
@@ -566,43 +638,123 @@ jQuery(document).ready(function () {
         const $newImg = $('<img>', { src: src, class: `vn-character-sprite ${activeClass} ${userClass}`, css: { zIndex: 15 } });
         $layer.append($newImg); setTimeout(() => { $oldActive.remove(); }, 600);
     }
-    function sendUserMessage() {
-        const inputVal = $('#vn-user-input').val(); const trimmedInput = inputVal.trim();
-        const stInput = $('#send_textarea'); stInput.val(inputVal); stInput[0].dispatchEvent(new Event('input', { bubbles: true }));
-        $('#send_but').click(); $('#vn-user-input').val(''); $('#vn-input-area').hide(); $('#vn-indicator').hide(); $('#vn-text-content').show();
-        if (trimmedInput.length > 0) { lastUserPrompt = trimmedInput; $('#vn-text-content').text(lastUserPrompt); } else { lastUserPrompt = ""; $('#vn-text-content').text("..."); }
+
+    function sendUserMessage(msg = null) {
+        let inputVal = msg;
+        if (!inputVal) {
+            inputVal = $('#vn-user-input').val();
+        }
+        const trimmedInput = inputVal.trim();
+        
+        const stInput = $('#send_textarea'); 
+        stInput.val(inputVal); 
+        stInput[0].dispatchEvent(new Event('input', { bubbles: true }));
+        
+        $('#send_but').click(); 
+        
+        $('#vn-user-input').val(''); 
+        $('#vn-input-area').hide(); 
+        $('#vn-choice-area').hide(); 
+        $('#vn-indicator').hide(); 
+        $('#vn-text-content').show();
+
+        if (trimmedInput.length > 0) { 
+            lastUserPrompt = trimmedInput; 
+            $('#vn-text-content').text(lastUserPrompt); 
+        } else { 
+            lastUserPrompt = ""; 
+            $('#vn-text-content').text("..."); 
+        }
     }
+
     const checkLastMessage = () => {
         if (!isVnModeOn) return;
         const lastMsgElement = $('#chat').children('.mes').last();
         if (lastMsgElement.length === 0) return;
+        
         const isUser = lastMsgElement.attr('is_user');
         if (isUser === "true" && !ENABLE_USER_SPRITE) { $('#vn-text-content').text("..."); return; }
+
         const messageContentDiv = lastMsgElement.find('.mes_text');
-        let parsedSegments = []; let tempActiveImg = null; let tempActiveBg = null; let targetSource = messageContentDiv;
-        const translatedBlock = messageContentDiv.find('.translated_text'); if (translatedBlock.length > 0) targetSource = translatedBlock;
+        let parsedSegments = []; 
+        let tempActiveImg = null; 
+        let tempActiveBg = null; 
+        let targetSource = messageContentDiv;
+        
+        const translatedBlock = messageContentDiv.find('.translated_text'); 
+        if (translatedBlock.length > 0) targetSource = translatedBlock;
+
         targetSource.contents().each(function() {
-            const node = $(this); let foundImg = null;
-            if (node.is('img')) foundImg = node.attr('src'); else if (node.find('img').length > 0) foundImg = node.find('img').attr('src');
+            const node = $(this); 
+            let foundImg = null;
+            
+            if (node.is('img')) foundImg = node.attr('src'); 
+            else if (node.find('img').length > 0) foundImg = node.find('img').attr('src');
+            
             if (foundImg) { 
-                // ★ [수정됨] 'background-' 또는 'bg-'가 포함된 이미지를 배경으로 인식
                 if (foundImg.toLowerCase().includes('background-') || foundImg.toLowerCase().includes('bg-')) {
                     tempActiveBg = foundImg; 
                 } else { 
                     tempActiveImg = foundImg; 
                 }
             }
-            let rawText = node.text(); if (node.is('style') || node.is('script')) rawText = "";
+
+            let rawText = node.text(); 
+            if (node.is('style') || node.is('script')) rawText = "";
+
             if (rawText && rawText.trim().length > 0) {
+                let extractedChoices = null;
+                const choiceMatch = rawText.match(/\{\{choices:\s*([\s\S]*?)\}\}/i);
+                
+                if (choiceMatch) {
+                    let choiceContent = choiceMatch[1];
+                    choiceContent = choiceContent.replace(/\n/g, ' ');
+                    extractedChoices = choiceContent.split(/(?=\b\d+\.)/).map(s => s.trim()).filter(s => s.length > 0);
+                    rawText = rawText.replace(/\{\{choices:[\s\S]*?\}\}/i, "");
+                }
+
                 const lines = rawText.split(/\n+/).filter(t => t.trim().length > 0);
-                lines.forEach(line => {
+                
+                if (lines.length === 0 && extractedChoices) {
                     const imgToUse = (!ENABLE_USER_SPRITE && isUser === "true") ? null : tempActiveImg;
-                    parsedSegments.push({ text: line.trim(), img: imgToUse, bg: tempActiveBg });
-                });
+                    parsedSegments.push({ text: "", img: imgToUse, bg: tempActiveBg, bgm: null, choices: extractedChoices });
+                } else {
+                    lines.forEach((line, idx) => {
+                        let lineText = line; 
+                        let lineBgm = null;
+                        let lineVideo = null; // [New] 비디오 변수
+                        
+                        // BGM 파싱: [[ ]]
+                        if (/\[\[bgm-stop\]\]/i.test(lineText)) { lineBgm = { type: 'stop' }; lineText = lineText.replace(/\[\[bgm-stop\]\]/gi, ""); }
+                        const startMatch = lineText.match(/\[\[bgm-start\s*:\s*(.*?)\s*\]\]/i);
+                        if (startMatch) { lineBgm = { type: 'play', name: startMatch[1].trim() }; lineText = lineText.replace(/\[\[bgm-start\s*:\s*(.*?)\s*\]\]/gi, ""); }
+
+                        // [New] Scene Video 파싱: {{scene-m:URL}}
+                        const videoMatch = lineText.match(/\{\{scene-m\s*:\s*(.*?)\}\}/i);
+                        if (videoMatch) {
+                            lineVideo = videoMatch[1].trim();
+                            lineText = lineText.replace(/\{\{scene-m\s*:\s*(.*?)\}\}/gi, "");
+                        }
+
+                        const imgToUse = (!ENABLE_USER_SPRITE && isUser === "true") ? null : tempActiveImg;
+                        const myChoices = (idx === lines.length - 1) ? extractedChoices : null;
+
+                        parsedSegments.push({ 
+                            text: lineText.trim(), 
+                            img: imgToUse, 
+                            bg: tempActiveBg,
+                            bgm: lineBgm,
+                            video: lineVideo, // [New]
+                            choices: myChoices 
+                        });
+                    });
+                }
             }
         });
+
         if (parsedSegments.length > 0) openVN(parsedSegments);
     };
+
     $('#vn-overlay').on('click', '#vn-trans-btn', function (e) {
         stopProp(e); const $vnInput = $('#vn-user-input'); const originalText = $vnInput.val().trim(); if (!originalText) return;
         const $translatorBtn = $('#llm_translate_input_button'); const $realInput = $('#send_textarea'); if ($translatorBtn.length === 0) return;
@@ -616,16 +768,35 @@ jQuery(document).ready(function () {
             } else if (checks >= 150) { clearInterval(pollInterval); $vnTransBtn.prop('disabled', false).html(originalBtnContent); $vnInput.prop('disabled', false).focus(); }
         }, 100);
     });
-    $('#vn-overlay').on('click', '#vn-user-sprite-toggle', function(e) {
-        stopProp(e); ENABLE_USER_SPRITE = !ENABLE_USER_SPRITE; localStorage.setItem('vnModeUserSprite', ENABLE_USER_SPRITE);
-        updateToggleButtonState(); $('#vn-sprite-layer').empty(); currentLeftSrc = ""; currentRightSrc = ""; setTimeout(checkLastMessage, 100);
-    });
+    $('#vn-overlay').on('click', '#vn-user-sprite-toggle', function(e) { stopProp(e); ENABLE_USER_SPRITE = !ENABLE_USER_SPRITE; localStorage.setItem('vnModeUserSprite', ENABLE_USER_SPRITE); updateToggleButtonState(); $('#vn-sprite-layer').empty(); currentLeftSrc = ""; currentRightSrc = ""; setTimeout(checkLastMessage, 100); });
     $(document).on('click', '#vn-toggle-btn', toggleVNMode);
     $('#vn-overlay').on('click', function (e) {
-        if ($(e.target).closest('#vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container').length > 0) return;
+        if ($(e.target).closest('#vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container, .vn-choice-btn, #vn-video-layer').length > 0) return;
         if (lastUserPrompt !== "" || $('#vn-text-content').text() === "...") return;
-        if (isTyping) { clearTimeout(typingTimer); $('#vn-text-content').text(currentFullText); isTyping = false; $('#vn-indicator').show(); return; }
-        vnStep++; if (vnStep < vnParagraphs.length) { renderText(); } else { $('#vn-text-content').hide(); $('#vn-indicator').hide(); $('#vn-input-area').css('display', 'flex'); $('#vn-user-input').focus(); }
+        
+        // 비디오 레이어가 떠 있으면 클릭 무시 (스킵 버튼으로만 제어)
+        if ($('#vn-video-layer').css('display') !== 'none') return;
+
+        if (isTyping) { 
+            clearTimeout(typingTimer); 
+            $('#vn-text-content').text(currentFullText); 
+            isTyping = false; 
+            
+            const currentChoices = vnParagraphs[vnStep] ? vnParagraphs[vnStep].choices : null;
+            if (currentChoices && currentChoices.length > 0) {
+                showChoices(currentChoices);
+                $('#vn-indicator').hide();
+            } else {
+                $('#vn-indicator').show();
+            }
+            return; 
+        }
+
+        if ($('#vn-choice-area').css('display') !== 'none') return;
+
+        vnStep++; 
+        if (vnStep < vnParagraphs.length) { renderText(); } 
+        else { finishStory(); }
     });
     $('#vn-send-btn').on('click', function(e) { stopProp(e); sendUserMessage(); });
     $('#vn-user-input').on('keydown', function (e) { stopProp(e); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUserMessage(); } });
@@ -634,7 +805,13 @@ jQuery(document).ready(function () {
         mutations.forEach((mutation) => {
             if (mutation.type === "attributes" && mutation.attributeName === "data-generating") {
                 const isGenerating = document.body.getAttribute("data-generating");
-                if (isGenerating === "true" && isVnModeOn) { $('#vn-input-area').hide(); $('#vn-text-content').show(); $('#vn-indicator').hide(); if (lastUserPrompt) $('#vn-text-content').text(lastUserPrompt); else $('#vn-text-content').text("..."); }
+                if (isGenerating === "true" && isVnModeOn) { 
+                    $('#vn-input-area').hide(); 
+                    $('#vn-choice-area').hide();
+                    $('#vn-text-content').show(); 
+                    $('#vn-indicator').hide(); 
+                    if (lastUserPrompt) $('#vn-text-content').text(lastUserPrompt); else $('#vn-text-content').text("..."); 
+                }
                 if (!isGenerating || isGenerating === "false") { lastUserPrompt = ""; setTimeout(checkLastMessage, 200); }
             }
         });
@@ -645,122 +822,87 @@ jQuery(document).ready(function () {
         window.vnTranslationDebounce = setTimeout(() => checkLastMessage(), 300);
     });
     translationObserver.observe(document.getElementById('chat'), { childList: true, subtree: true, characterData: true });
-    console.log("[VN Mode] v5.4.1 Loaded.");
+    console.log("[VN Mode] v5.8.0 Loaded.");
 });
 
 // ======================================================
-// [VN Mode] Sprite Slider Injector (Auto Save Support)
+// [VN Mode] Sprite & Dialog Slider Injector
 // ======================================================
 (function() {
-    // 저장된 값 불러오기 (없으면 기본값 사용)
-    const savedSettings = {
-        charScale: localStorage.getItem('vnModeCharScale') || 1.0,
-        charX: localStorage.getItem('vnModeCharX') || 0,
-        charY: localStorage.getItem('vnModeCharY') || 0,
-        userScale: localStorage.getItem('vnModeUserScale') || 1.0,
-        userX: localStorage.getItem('vnModeUserX') || 0,
-        userY: localStorage.getItem('vnModeUserY') || 0,
-        portraitSize: localStorage.getItem('vnModePortraitSize') || 180 // 초상화 크기 저장값
+    const DEFAULTS = {
+        charScale: 1.0, charX: 0, charY: 0,
+        userScale: 1.0, userX: 0, userY: 0,
+        portraitSize: 180,
+        dialogY: 40, dialogX: 0, dialogW: 95, dialogH: 250
     };
-
-    // CSS 변수 초기 적용 (새로고침 시 즉시 반영)
-    const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--vn-char-scale', savedSettings.charScale);
-    rootStyle.setProperty('--vn-char-x', savedSettings.charX + 'px');
-    rootStyle.setProperty('--vn-char-y', savedSettings.charY + 'px');
-    rootStyle.setProperty('--vn-user-scale', savedSettings.userScale);
-    rootStyle.setProperty('--vn-user-x', savedSettings.userX + 'px');
-    rootStyle.setProperty('--vn-user-y', savedSettings.userY + 'px');
-    rootStyle.setProperty('--vn-portrait-size', savedSettings.portraitSize + 'px');
-
-    function createSliderHTML(id, label, min, max, step, val) {
-        return `
-        <div class="vn-slider-container">
-            <div class="vn-slider-header">
-                <span>${label}</span>
-                <span class="vn-slider-val" id="${id}-val">${val}${id.includes('scale') ? 'x' : (id.includes('size') ? '' : '')}</span>
-            </div>
-            <input type="range" id="${id}" class="vn-slider-range" min="${min}" max="${max}" step="${step}" value="${val}">
-        </div>`;
+    function getSettings() {
+        return {
+            charScale: localStorage.getItem('vnModeCharScale') || DEFAULTS.charScale,
+            charX: localStorage.getItem('vnModeCharX') || DEFAULTS.charX,
+            charY: localStorage.getItem('vnModeCharY') || DEFAULTS.charY,
+            userScale: localStorage.getItem('vnModeUserScale') || DEFAULTS.userScale,
+            userX: localStorage.getItem('vnModeUserX') || DEFAULTS.userX,
+            userY: localStorage.getItem('vnModeUserY') || DEFAULTS.userY,
+            portraitSize: localStorage.getItem('vnModePortraitSize') || DEFAULTS.portraitSize,
+            dialogY: localStorage.getItem('vnModeDialogY') || DEFAULTS.dialogY,
+            dialogX: localStorage.getItem('vnModeDialogX') || DEFAULTS.dialogX,
+            dialogW: localStorage.getItem('vnModeDialogW') || DEFAULTS.dialogW,
+            dialogH: localStorage.getItem('vnModeDialogH') || DEFAULTS.dialogH
+        };
     }
-
+    const setVar = (name, val, unit='') => document.documentElement.style.setProperty(name, val + unit);
+    function applyAllSettings() {
+        const s = getSettings();
+        setVar('--vn-char-scale', s.charScale); setVar('--vn-char-x', s.charX, 'px'); setVar('--vn-char-y', s.charY, 'px');
+        setVar('--vn-user-scale', s.userScale); setVar('--vn-user-x', s.userX, 'px'); setVar('--vn-user-y', s.userY, 'px');
+        setVar('--vn-portrait-size', s.portraitSize, 'px');
+        setVar('--vn-dialog-y', s.dialogY, 'px'); setVar('--vn-dialog-x', s.dialogX, 'px');
+        setVar('--vn-dialog-w', s.dialogW, '%'); setVar('--vn-dialog-h', s.dialogH, 'px');
+    }
+    applyAllSettings();
+    function createSliderHTML(id, label, min, max, step, val, unitSuffix='') {
+        return `<div class="vn-slider-container"><div class="vn-slider-header"><span>${label}</span><span class="vn-slider-val" id="${id}-val">${val}${unitSuffix}</span></div><input type="range" id="${id}" class="vn-slider-range" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+    }
     function injectSpriteSliders() {
-        const panel = document.getElementById('vn-preset-panel');
-        if (!panel) return;
+        const panel = document.getElementById('vn-preset-panel'); if (!panel) return;
         if (document.getElementById('vn-sprite-sliders-area')) return;
+        const sliderArea = document.createElement('div'); sliderArea.id = 'vn-sprite-sliders-area'; sliderArea.className = 'vn-sprite-settings-group';
+        const s = getSettings();
+        let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h5 style="margin:0;">🎨 레이아웃 설정</h5><button id="vn-reset-settings-btn" style="background:#607D8B; color:white; border:none; border-radius:4px; padding:3px 8px; font-size:0.75em; cursor:pointer;">🔄 초기화</button></div>`;
+        html += `<div style="margin-bottom:10px; font-size:0.85em; color:#0288D1; font-weight:bold;">[💬 대화창]</div>`;
+        html += createSliderHTML('vn-dialog-y-slider', '↕ 상하 (Bottom)', 0, 800, 10, s.dialogY, 'px');
+        html += createSliderHTML('vn-dialog-x-slider', '↔ 좌우 (Offset)', -800, 800, 10, s.dialogX, 'px');
+        html += createSliderHTML('vn-dialog-w-slider', '📏 너비 (Width)', 20, 100, 1, s.dialogW, '%');
+        html += createSliderHTML('vn-dialog-h-slider', '📐 높이 (Height)', 100, 1200, 10, s.dialogH, 'px');
+        html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#7B1FA2; font-weight:bold;">[캐릭터]</div>`;
+        html += createSliderHTML('vn-char-scale-slider', '크기', 0.2, 3.0, 0.05, s.charScale, 'x');
+        html += createSliderHTML('vn-char-x-slider', '가로 위치', -800, 800, 10, s.charX);
+        html += createSliderHTML('vn-char-y-slider', '세로 위치', -500, 500, 10, s.charY);
+        html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#388E3C; font-weight:bold;">[유저]</div>`;
+        html += createSliderHTML('vn-user-scale-slider', '크기', 0.2, 3.0, 0.05, s.userScale, 'x');
+        html += createSliderHTML('vn-user-x-slider', '가로 위치', -800, 800, 10, s.userX);
+        html += createSliderHTML('vn-user-y-slider', '세로 위치', -500, 500, 10, s.userY);
+        html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#E91E63; font-weight:bold;">[초상화]</div>`;
+        html += createSliderHTML('vn-portrait-size-slider', '박스 크기', 50, 400, 5, s.portraitSize, 'px');
+        sliderArea.innerHTML = html; panel.appendChild(sliderArea);
 
-        const sliderArea = document.createElement('div');
-        sliderArea.id = 'vn-sprite-sliders-area';
-        sliderArea.className = 'vn-sprite-settings-group';
-        
-        // HTML 생성 시 savedSettings 값 사용
-        let html = `<h5>🎨 스프라이트 조정</h5>`;
-        html += `<div style="margin-bottom:10px; font-size:0.85em; color:#7B1FA2; font-weight:bold;">[캐릭터 (Character)]</div>`;
-        html += createSliderHTML('vn-char-scale-slider', '크기 (Scale)', 0.5, 2.0, 0.05, savedSettings.charScale);
-        html += createSliderHTML('vn-char-x-slider', '가로 위치 (X)', -500, 500, 10, savedSettings.charX);
-        html += createSliderHTML('vn-char-y-slider', '세로 위치 (Y)', -500, 500, 10, savedSettings.charY);
+        const bindSlider = (id, varName, storageKey, unit='') => {
+            const el = document.getElementById(id); const valEl = document.getElementById(id + '-val');
+            if(el) { el.addEventListener('input', (e) => { setVar(varName, e.target.value, unit); valEl.innerText = e.target.value + unit; localStorage.setItem(storageKey, e.target.value); }); }
+        };
+        bindSlider('vn-dialog-y-slider', '--vn-dialog-y', 'vnModeDialogY', 'px'); bindSlider('vn-dialog-x-slider', '--vn-dialog-x', 'vnModeDialogX', 'px');
+        bindSlider('vn-dialog-w-slider', '--vn-dialog-w', 'vnModeDialogW', '%'); bindSlider('vn-dialog-h-slider', '--vn-dialog-h', 'vnModeDialogH', 'px');
+        bindSlider('vn-char-scale-slider', '--vn-char-scale', 'vnModeCharScale', 'x'); bindSlider('vn-char-x-slider', '--vn-char-x', 'vnModeCharX', 'px'); bindSlider('vn-char-y-slider', '--vn-char-y', 'vnModeCharY', 'px');
+        bindSlider('vn-user-scale-slider', '--vn-user-scale', 'vnModeUserScale', 'x'); bindSlider('vn-user-x-slider', '--vn-user-x', 'vnModeUserX', 'px'); bindSlider('vn-user-y-slider', '--vn-user-y', 'vnModeUserY', 'px');
+        bindSlider('vn-portrait-size-slider', '--vn-portrait-size', 'vnModePortraitSize', 'px');
 
-        html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#388E3C; font-weight:bold;">[유저 (User)]</div>`;
-        html += createSliderHTML('vn-user-scale-slider', '크기 (Scale)', 0.5, 2.0, 0.05, savedSettings.userScale);
-        html += createSliderHTML('vn-user-x-slider', '가로 위치 (X)', -500, 500, 10, savedSettings.userX);
-        html += createSliderHTML('vn-user-y-slider', '세로 위치 (Y)', -500, 500, 10, savedSettings.userY);
-
-        html += `<div style="margin-top:15px; margin-bottom:10px; font-size:0.85em; color:#E91E63; font-weight:bold;">[초상화 (Portrait)]</div>`;
-        html += createSliderHTML('vn-portrait-size-slider', '박스 크기 (Size)', 80, 300, 5, savedSettings.portraitSize);
-
-        sliderArea.innerHTML = html;
-        panel.appendChild(sliderArea);
-
-        const setVar = (name, val, unit='') => document.documentElement.style.setProperty(name, val + unit);
-        
-        // 이벤트 리스너 (값 변경 시 localStorage에 저장 추가)
-        document.getElementById('vn-char-scale-slider').addEventListener('input', (e) => { 
-            setVar('--vn-char-scale', e.target.value); 
-            document.getElementById('vn-char-scale-slider-val').innerText = e.target.value + 'x';
-            localStorage.setItem('vnModeCharScale', e.target.value);
-        });
-        document.getElementById('vn-char-x-slider').addEventListener('input', (e) => { 
-            setVar('--vn-char-x', e.target.value, 'px'); 
-            document.getElementById('vn-char-x-slider-val').innerText = e.target.value;
-            localStorage.setItem('vnModeCharX', e.target.value);
-        });
-        document.getElementById('vn-char-y-slider').addEventListener('input', (e) => { 
-            setVar('--vn-char-y', e.target.value, 'px'); 
-            document.getElementById('vn-char-y-slider-val').innerText = e.target.value;
-            localStorage.setItem('vnModeCharY', e.target.value);
-        });
-        
-        document.getElementById('vn-user-scale-slider').addEventListener('input', (e) => { 
-            setVar('--vn-user-scale', e.target.value); 
-            document.getElementById('vn-user-scale-slider-val').innerText = e.target.value + 'x';
-            localStorage.setItem('vnModeUserScale', e.target.value);
-        });
-        document.getElementById('vn-user-x-slider').addEventListener('input', (e) => { 
-            setVar('--vn-user-x', e.target.value, 'px'); 
-            document.getElementById('vn-user-x-slider-val').innerText = e.target.value;
-            localStorage.setItem('vnModeUserX', e.target.value);
-        });
-        document.getElementById('vn-user-y-slider').addEventListener('input', (e) => { 
-            setVar('--vn-user-y', e.target.value, 'px'); 
-            document.getElementById('vn-user-y-slider-val').innerText = e.target.value;
-            localStorage.setItem('vnModeUserY', e.target.value);
-        });
-
-        // ★ 초상화 크기 저장 로직
-        document.getElementById('vn-portrait-size-slider').addEventListener('input', (e) => {
-            setVar('--vn-portrait-size', e.target.value, 'px');
-            document.getElementById('vn-portrait-size-slider-val').innerText = e.target.value;
-            localStorage.setItem('vnModePortraitSize', e.target.value); // 저장
-        });
-    }
-
-    setInterval(() => {
-        injectSpriteSliders();
-        const sprites = document.querySelectorAll('.vn-character-sprite');
-        sprites.forEach(img => {
-            if (img.src && (img.src.includes('user') || img.src.includes('User') || img.src.includes('avatar'))) {
-                if (!img.classList.contains('vn-user-sprite')) img.classList.add('vn-user-sprite');
+        document.getElementById('vn-reset-settings-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(confirm("초기화 하시겠습니까?")) {
+                ['vnModeCharScale', 'vnModeCharX', 'vnModeCharY', 'vnModeUserScale', 'vnModeUserX', 'vnModeUserY', 'vnModePortraitSize', 'vnModeDialogY', 'vnModeDialogX', 'vnModeDialogW', 'vnModeDialogH'].forEach(k => localStorage.removeItem(k));
+                applyAllSettings(); document.getElementById('vn-sprite-sliders-area').remove(); injectSpriteSliders();
             }
         });
-    }, 2000);
+    }
+    setInterval(() => { injectSpriteSliders(); const sprites = document.querySelectorAll('.vn-character-sprite'); sprites.forEach(img => { if (img.src && (img.src.includes('user') || img.src.includes('User') || img.src.includes('avatar'))) { if (!img.classList.contains('vn-user-sprite')) img.classList.add('vn-user-sprite'); } }); }, 2000);
 })();
