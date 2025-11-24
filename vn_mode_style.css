@@ -24,6 +24,16 @@
 }
 
 /* --- [좌측 상단 컨트롤] --- */
+/* ... 기존 버튼 스타일 아래에 추가 ... */
+
+#vn-skip-btn { background-color: #607D8B; border-color: #455A64; }
+#vn-skip-btn.active { 
+    background-color: #FFEB3B; 
+    color: #333; 
+    border-color: #FBC02D; 
+    font-weight: 900;
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.6);
+}
 #vn-settings-area { position: absolute; top: 20px; left: 20px; z-index: 50; pointer-events: auto; display: flex; gap: 10px; }
 .vn-top-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 18px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid transparent; color: white; height: 36px; box-sizing: border-box; }
 .vn-top-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.25); }
@@ -335,4 +345,507 @@ body.vn-mode-active #sheld, body.vn-mode-active #top-bar, body.vn-mode-active .d
 /* [추가] VN 모드가 켜져있을 때 진입 버튼 숨기기 */
 body.vn-mode-active #vn-toggle-btn {
     display: none !important;
+}
+
+
+
+/* ========================================= */
+/* [추가] 히스토리(로그) 기능 스타일 */
+/* ========================================= */
+
+/* 대화창 하단 중앙 히스토리 버튼 */
+#vn-history-btn {
+    position: absolute;
+    bottom: 10px; /* 대화창 바로 아래 */
+    left: 50%;
+    transform: translateX(-50%);
+    
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: 1px solid #aaa;
+    border-radius: 0 0 10px 10px; /* 아래쪽만 둥글게 */
+    padding: 5px 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 30;
+    transition: background 0.2s;
+}
+
+#vn-history-btn:hover {
+    background-color: rgba(255, 152, 0, 0.9);
+    color: #000;
+}
+
+/* 히스토리 패널 (전체 화면 오버레이) */
+#vn-history-panel {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100000; /* VN 오버레이보다 위 */
+    backdrop-filter: blur(5px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+/* 히스토리 컨테이너 */
+.vn-history-container {
+    width: 80%;
+    max-width: 800px;
+    height: 80%;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    border: 2px solid #9C27B0;
+}
+
+/* 헤더 */
+.vn-history-header {
+    padding: 15px;
+    background: #9C27B0;
+    color: white;
+    font-size: 1.2em;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vn-history-close {
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: transform 0.2s;
+}
+.vn-history-close:hover { transform: scale(1.2); }
+
+/* 내용 영역 */
+#vn-history-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 1em;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 스크롤바 커스텀 */
+#vn-history-content::-webkit-scrollbar { width: 8px; }
+#vn-history-content::-webkit-scrollbar-thumb { background: #CE93D8; border-radius: 4px; }
+#vn-history-content::-webkit-scrollbar-track { background: #f0f0f0; }
+
+/* 개별 로그 항목 */
+.vn-log-entry {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px dashed #ddd;
+    padding-bottom: 10px;
+}
+
+.vn-log-name {
+    font-weight: bold;
+    margin-bottom: 3px;
+    font-size: 0.9em;
+}
+.vn-log-name.user { color: #2196F3; }     /* 유저 이름 색상 */
+.vn-log-name.char { color: #E91E63; }     /* 캐릭터 이름 색상 */
+.vn-log-name.system { color: #757575; }   /* 시스템/기타 */
+
+.vn-log-text {
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+
+/* ========================================= */
+/* [추가] 세이브 & 로드 시스템 스타일 (Compact Ver) */
+/* ========================================= */
+
+/* 하단 버튼 그룹 (세이브, 로드, 히스토리) */
+/* ========================================= */
+/* [최종 수정] 우측 하단 플로팅 메뉴 (디자인 통일) */
+/* ========================================= */
+
+/* 전체 컨트롤 컨테이너 */
+#vn-bottom-controls {
+    position: fixed !important;
+    bottom: 25px !important;
+    right: 25px !important;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 15px; /* 버튼 사이 간격 */
+    z-index: 99999 !important;
+    pointer-events: auto;
+}
+
+/* 1. 메인 토글 버튼 (+) */
+#vn-menu-toggle-btn {
+    width: 55px;
+    height: 55px;
+    background-color: #FF5252; /* 붉은색 포인트 */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6em;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.4);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+#vn-menu-toggle-btn:hover { transform: scale(1.1) rotate(90deg); }
+#vn-menu-toggle-btn.active { background-color: #333; transform: rotate(45deg); }
+
+/* 2. 메뉴 리스트 (애니메이션) */
+#vn-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+#vn-bottom-controls.menu-open #vn-menu-list {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* 3. 개별 버튼 디자인 (여기가 핵심! 강제 통일) */
+.vn-bottom-btn {
+    /* 모양 강제 초기화 */
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important; /* 완전한 원형 */
+    
+    /* 색상 통일 (하얀색 배경, 짙은 회색 아이콘) */
+    background-color: #fff !important; 
+    color: #555 !important;
+    border: 1px solid #ddd !important;
+    
+    /* 내용 정렬 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    
+    /* 기타 스타일 제거 및 재설정 */
+    font-size: 1.2em !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important;
+    transition: all 0.2s !important;
+    cursor: pointer !important;
+}
+
+/* 마우스 올렸을 때 */
+.vn-bottom-btn:hover {
+    transform: scale(1.15);
+    color: #FF5252 !important; /* 아이콘 색 변경 */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+}
+
+/* 버튼별 아이콘 미세 조정 */
+#vn-save-btn i { color: #5C6BC0; } /* 저장: 파란색 */
+#vn-load-btn i { color: #FFA726; } /* 로드: 주황색 */
+#vn-history-btn i { color: #8D6E63; } /* 로그: 갈색 */
+#vn-skip-btn i { color: #26A69A; } /* 스킵: 청록색 */
+
+/* 4. 스킵 활성화 상태 (노란색으로 깜빡임) */
+#vn-skip-btn.active {
+    background-color: #FFEB3B !important;
+    border-color: #FBC02D !important;
+    color: #333 !important;
+    animation: pulse-ring 1.5s infinite;
+}
+#vn-skip-btn.active i { color: #d84315; }
+
+@keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0); }
+}
+
+.vn-bottom-btn:hover {
+    background-color: rgba(255, 152, 0, 0.9);
+    color: #000;
+    transform: translateY(-2px);
+}
+
+#vn-history-btn {
+    position: static !important;
+    transform: none !important;
+    border-radius: 0 0 10px 10px;
+}
+
+/* 세이브/로드 오버레이 패널 */
+#vn-saveload-panel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100001;
+    backdrop-filter: blur(5px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.vn-saveload-container {
+    width: 90%;
+    max-width: 900px; /* 전체 폭 제한 */
+    height: 85%;      /* 높이 약간 증가 */
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+}
+
+.vn-saveload-header {
+    color: white;
+    font-family: 'Jua', sans-serif;
+    font-size: 1.8em;
+    text-align: center;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.vn-saveload-close {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 0.6em;
+    background: rgba(255,255,255,0.2);
+    padding: 5px 10px;
+    border-radius: 15px;
+    color: #eee;
+    transition: 0.2s;
+}
+.vn-saveload-close:hover { background: #f44336; color: #fff; }
+
+/* ========================================= */
+/* [FIX] 세이브/로드 슬롯 레이아웃 수정 패치 */
+/* ========================================= */
+
+/* 1. 슬롯 그리드: 옆 슬롯 찌그러짐 방지 */
+.vn-slots-grid {
+    display: grid;
+    /* 정확히 50%씩 2개로 나누고 간격 확보 */
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; 
+    gap: 15px !important;
+    padding: 10px;
+    overflow-x: hidden; /* 가로 스크롤 방지 */
+}
+
+/* 2. 개별 슬롯 카드: 높이 제한 해제 및 크기 안정화 */
+.vn-save-slot {
+    display: flex;
+    flex-direction: column;
+    /* 고정된 최소 높이 제거 (불필요한 공백 방지) */
+    min-height: auto !important; 
+    height: auto !important;
+    width: 100%;
+    box-sizing: border-box;
+    /* 내용이 넘치지 않도록 설정 */
+    overflow: hidden; 
+}
+
+/* 3. 문장 미리보기 (텍스트) 삭제 */
+.vn-slot-text {
+    display: none !important;
+}
+
+/* 4. 날짜 표시: 자동 줄바꿈 적용 및 스타일 정리 */
+.vn-slot-date {
+    /* 한 줄로 강제되던 속성을 해제하고 자동 줄바꿈 적용 */
+    white-space: normal !important; 
+    word-break: keep-all; /* 단어 단위로 끊기 (한글에 적합) */
+    overflow-wrap: break-word;
+    
+    font-size: 0.9em;
+    color: #f2a900;
+    font-weight: bold;
+    text-align: center; /* 중앙 정렬 */
+    margin-bottom: 0 !important;
+    line-height: 1.2;
+    padding: 5px 0;
+}
+
+/* 5. 썸네일 이미지 영역 조정 */
+.vn-slot-thumb {
+    width: 100%;
+    /* 이미지 높이 고정 (들쑥날쑥 방지) */
+    height: 120px !important; 
+    margin-bottom: 5px !important;
+    flex-shrink: 0; /* 찌그러짐 방지 */
+}
+.vn-slot-thumb img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+.vn-slot-info {
+    color: #ddd;
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.vn-slot-date {
+    font-size: 0.8em;
+    color: #f2a900;
+    margin-bottom: 2px;
+    font-weight: bold;
+}
+
+.vn-slot-text {
+    font-size: 0.75em;
+    color: #bbb;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* 모바일 대응 (화면이 좁을 때만 2열 or 1열) */
+@media (max-width: 768px) {
+    .vn-slots-grid {
+        grid-template-columns: repeat(2, 1fr); /* 태블릿/큰 폰: 2열 */
+        gap: 8px;
+    }
+    .vn-save-slot { padding: 6px; }
+    .vn-slot-thumb { height: 70px; } /* 모바일은 썸네일 더 작게 */
+}
+
+@media (max-width: 480px) {
+    .vn-slots-grid {
+        grid-template-columns: 1fr; /* 아주 작은 폰: 1열 */
+    }
+    .vn-slot-thumb { height: 100px; } /* 1열일 땐 썸네일 다시 키움 */
+}
+
+
+/* ========================================= */
+/* [추가] 세이브 슬롯 삭제 버튼 스타일 */
+/* ========================================= */
+.vn-save-slot {
+    position: relative; /* 삭제 버튼 위치 기준점 */
+}
+
+.vn-slot-del-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 26px;
+    height: 26px;
+    background-color: rgba(244, 67, 54, 0.9); /* 빨간색 배경 */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 50; /* 제일 위에 표시 */
+    font-size: 0.8em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    transition: transform 0.2s, background-color 0.2s;
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.vn-slot-del-btn:hover {
+    transform: scale(1.15);
+    background-color: #d32f2f;
+}
+
+/* 썸네일 영역이 버튼을 가리지 않도록 안전장치 */
+.vn-slot-thumb {
+    z-index: 1; 
+}
+
+/* [추가/수정] 하단 스킵 버튼 스타일 */
+#vn-skip-btn.active {
+    background-color: #FFEB3B !important; /* 활성화 시 노란색 */
+    color: #333 !important;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+    animation: pulse-skip 1s infinite;
+}
+
+@keyframes pulse-skip {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+}
+
+/* [긴급 수정] 버튼 안에 글씨가 생겨도 안 보이게 숨김 처리 */
+#vn-bottom-controls .vn-bottom-btn {
+    font-size: 0 !important; /* 글씨 크기를 0으로 만들어서 숨김 */
+}
+
+/* 아이콘은 다시 보이게 크기 복구 */
+#vn-bottom-controls .vn-bottom-btn i {
+    font-size: 20px !important; /* 아이콘 크기는 20px로 유지 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* ========================================= */
+/* [추가] 동영상 레이어 최상단 고정 패치 */
+/* ========================================= */
+#vn-video-layer {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    
+    /* 대화창(20), 선택지(200000)보다 더 높은 숫자로 설정하여 제일 위에 띄움 */
+    z-index: 2147483647 !important; 
+    
+    background-color: #000 !important;
+    pointer-events: auto !important; /* 클릭 가능하도록 설정 */
+}
+
+/* 동영상 스킵 버튼 스타일 (영상보다 더 위에 있어야 함) */
+#vn-video-skip {
+    position: absolute !important;
+    top: 20px !important;
+    right: 30px !important;
+    
+    /* 동영상 레이어와 같거나 높아야 함 */
+    z-index: 2147483647 !important; 
+    
+    color: #fff !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    padding: 10px 20px !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    border-radius: 30px !important;
+    cursor: pointer !important;
+    font-weight: bold !important;
+}
+#vn-video-skip:hover {
+    background: #f44336 !important;
+    border-color: #f44336 !important;
 }
