@@ -11,9 +11,18 @@ jQuery(document).ready(function () {
     // 스킵 관련 상태 변수
     let isSkipping = false;
 
+    // [필수] 변수들 (없으면 추가하세요)
+    let vnSceneCounter = 0;
+    let activeSceneSrc = ""; 
+    
+    // [★추가] 방금 다 보고 끈 이미지 기억용 (재실행 방지)
+    let finishedSceneSrc = "";
+
     // 설정 불러오기
     let ENABLE_USER_SPRITE = localStorage.getItem('vnModeUserSprite') === 'false' ? false : true;
     let ENABLE_PORTRAIT_MODE = localStorage.getItem('vnModePortrait') === 'true';
+	// [★추가] JS 러너 설정 (기본값 ON)
+    let ENABLE_JS_RUNNER = localStorage.getItem('vnModeJsRunner') === 'false' ? false : true;
 
     let SAVED_CUSTOM_CSS_DRAFT = localStorage.getItem('vnModeCustomCSS') || ''; 
     let customThemes = JSON.parse(localStorage.getItem('vnModeCustomThemes') || '{}');
@@ -71,24 +80,30 @@ jQuery(document).ready(function () {
 #vn-indicator { border-top-color: #333; }`
     };
 
-    // -------------------------------------------------------
-    // [1] HTML UI 생성
+// -------------------------------------------------------
+    // [1] HTML UI 생성 (JS 러너 팝업 제거된 버전)
     // -------------------------------------------------------
     const htmlTemplate = `
         <div id="vn-overlay">
             <div id="vn-background-layer"></div>
             <div id="vn-sprite-layer"></div>
             <div id="vn-choice-area"></div>
+
             <div id="vn-video-layer" style="display:none;">
                 <video id="vn-scene-video" style="width:100%; height:100%; object-fit:cover; background:#000;" playsinline></video>
                 <div id="vn-video-skip" title="Click to Skip">SKIP >></div>
+            </div>
+
+            <div id="vn-scene-overlay-layer" style="position: fixed !important; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 18 !important; background-color: #000; display: none; pointer-events: auto;">
+                <img id="vn-scene-overlay-img" src="" alt="Scene" style="width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease-in-out;">
             </div>
 
             <div id="vn-settings-area">
                 <div id="vn-user-sprite-toggle" class="vn-top-btn" title="유저 이미지 ON/OFF"></div>
                 <div id="vn-portrait-mode-toggle" class="vn-top-btn" title="초상화 모드 (Stardew Style)">🖼️ Portrait</div>
                 <div id="vn-bgm-toggle-btn" class="vn-top-btn" title="BGM Control">🎵 BGM</div>
-                </div>
+                <div id="vn-js-runner-toggle" class="vn-top-btn" title="JS Script ON/OFF">📜 JS</div>
+            </div>
 
             <div id="vn-history-panel">
                 <div class="vn-history-container">
@@ -107,7 +122,7 @@ jQuery(document).ready(function () {
                         <div class="vn-saveload-close"><i class="fa-solid fa-xmark"></i> Close</div>
                     </div>
                     <div id="vn-slots-grid" class="vn-slots-grid">
-                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -217,13 +232,16 @@ jQuery(document).ready(function () {
                     <img id="vn-portrait-img" src="" alt="portrait" />
                 </div>
                 <div id="vn-text-wrapper">
-                    <div id="vn-text-content">...</div>
-                    <div id="vn-input-area">
-                        <textarea id="vn-user-input" placeholder="Type your message..."></textarea>
-                        <div class="vn-input-buttons">
-                            <button id="vn-trans-btn" title="Translate"><i class="fa-solid fa-language"></i></button>
-                            <button id="vn-send-btn">SEND</button>
-                        </div>
+                <div id="vn-text-content">...</div>
+
+                <div id="vn-qr-area"></div> 
+                <div id="vn-input-area">
+                    <textarea id="vn-user-input" placeholder="Type your message..."></textarea>
+<div class="vn-input-buttons">
+    <button id="vn-direction-btn" title="Direction Manager"><i class="fa-solid fa-feather"></i></button>
+    <button id="vn-trans-btn" title="Translate"><i class="fa-solid fa-language"></i></button>
+    <button id="vn-send-btn">SEND</button>
+</div>
                     </div>
                 </div>
                 <div id="vn-indicator"></div>
@@ -235,6 +253,7 @@ jQuery(document).ready(function () {
     if ($('#vn-overlay').length === 0 || $('#vn-saveload-panel').length === 0) {
         $('#vn-overlay').remove(); 
         $('body').append(htmlTemplate); 
+
         console.log("[VN Mode] UI Updated to v6.2.1");
     }
 
@@ -316,7 +335,93 @@ jQuery(document).ready(function () {
         btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); if (!hasMoved) toggleVNMode(); };
         window.addEventListener('resize', function() { const rect = btn.getBoundingClientRect(); if (rect.right > window.innerWidth) btn.style.left = (window.innerWidth - rect.width - 10) + 'px'; if (rect.bottom > window.innerHeight) btn.style.top = (window.innerHeight - rect.height - 10) + 'px'; });
     }
+// [추가] JS 러너 창 드래그 기능
+	// [수정됨] 스크립트 배경 드래그 & 더블클릭 최소화
+    function setupWindowFeatures($window, index) {
+        const $content = $window.find('.vn-js-content');
+        const popup = $window[0];
 
+        let isDragging = false;
+        let startX, startY;
+
+        // 1. 마우스를 눌렀을 때 (드래그 시작)
+        $window.on('mousedown', function(e) {
+            // [중요] 상호작용이 필요한 요소들은 드래그 막음
+            // (입력창, 버튼, 선택박스, 링크, 라벨 등)
+            if ($(e.target).is('input, textarea, button, select, option, a, label')) {
+                return;
+            }
+            
+            // 만약 텍스트 선택을 하고 싶다면 이 줄을 지우세요.
+            // 하지만 드래그 편의성을 위해 기본 동작(텍스트 선택 등)을 막습니다.
+            e.preventDefault(); 
+
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // 드래그 중 iframe에 마우스 뺏김 방지
+            $content.css('pointer-events', 'none');
+            
+            $(document).on('mousemove.vnWindowDrag', function(e) {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                popup.style.left = (popup.offsetLeft + dx) + 'px';
+                popup.style.top = (popup.offsetTop + dy) + 'px';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+
+            $(document).on('mouseup.vnWindowDrag', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    $(document).off('mousemove.vnWindowDrag');
+                    $(document).off('mouseup.vnWindowDrag');
+                    
+                    // 드래그 끝, 클릭 다시 허용
+                    $content.css('pointer-events', 'auto');
+
+                    // 위치 저장
+                    const rect = popup.getBoundingClientRect();
+                    const posToSave = { top: rect.top, left: rect.left };
+                    localStorage.setItem('vnModeJsWindowPos_' + index, JSON.stringify(posToSave));
+                }
+            });
+        });
+
+        // 2. 더블 클릭했을 때 (최소화/복구)
+        $window.on('dblclick', function(e) {
+            // 입력창 등에서는 더블클릭(단어 선택) 허용, 최소화 안 함
+            if ($(e.target).is('input, textarea, button, select, option')) {
+                return;
+            }
+            
+            e.stopPropagation();
+            
+            if ($window.hasClass('minimized')) {
+                $window.removeClass('minimized'); // 복구
+            } else {
+                $window.addClass('minimized');    // 최소화
+            }
+        });
+        
+        // 3. 우클릭했을 때 (닫기 - 최소화 상태일 때만)
+        $window.on('contextmenu', function(e) {
+            if ($window.hasClass('minimized')) {
+                e.preventDefault();
+                if(confirm("이 스크립트를 닫으시겠습니까?")) {
+                    $window.remove();
+                }
+            }
+        });
+    }
+    
+    // 초기화 시 실행 (기존 코드 대체용, 지금은 비워둠)
+    // setTimeout(makeJsPopupDraggable, 1000); <-- 이 줄도 지우세요
     // -------------------------------------------------------
     // [3] 기본 로직 함수들
     // -------------------------------------------------------
@@ -378,6 +483,29 @@ jQuery(document).ready(function () {
         if (ENABLE_USER_SPRITE) $btn.removeClass('off').addClass('on').text('🧑 User Img: ON');
         else $btn.removeClass('on').addClass('off').text('🧑 User Img: OFF');
     }
+	// [★추가] 모바일 감지 함수
+    function isMobileDevice() {
+        // 화면 너비 900px 이하이거나 터치 포인트가 있으면 모바일로 간주
+        return (window.innerWidth <= 900) || (navigator.maxTouchPoints > 0);
+    }
+
+    // [★추가] JS 러너 버튼 상태 업데이트 함수
+    function updateJsRunnerToggleState() {
+        const $btn = $('#vn-js-runner-toggle');
+        
+        // 모바일이면 버튼을 아예 숨깁니다
+        if (isMobileDevice()) {
+            $btn.hide();
+            return;
+        }
+
+        $btn.show(); // PC면 보임
+        if (ENABLE_JS_RUNNER) {
+            $btn.removeClass('off').addClass('on').css({'background-color':'#673AB7', 'border-color':'#512DA8'}).text('📜 JS: ON');
+        } else {
+            $btn.removeClass('on').addClass('off').css({'background-color':'#9E9E9E', 'border-color':'#616161'}).text('📜 JS: OFF');
+        }
+    }
     
     // [수정] 스킵 UI 업데이트 (글자 절대 안 쓰고 클래스만 넣었다 뺐다 함)
     function updateSkipUI() {
@@ -394,6 +522,8 @@ jQuery(document).ready(function () {
     }
 
     updateThemeSelect(); applyTheme(CURRENT_THEME); applyFontSize(CURRENT_FONT_SIZE);
+    updateToggleButtonState(); updatePortraitToggleState();
+    updateJsRunnerToggleState(); // [★추가] 초기화 시 JS 버튼 상태 적용
     updateToggleButtonState(); updatePortraitToggleState();
     applyBtnStyle(); makeButtonDraggable();
 
@@ -557,7 +687,22 @@ jQuery(document).ready(function () {
     function toggleVNMode() {
         isVnModeOn = !isVnModeOn;
         const btn = $('#vn-toggle-btn');
+        
         if (isVnModeOn) {
+            // ▼▼▼ [추가] 전개지시 확장이 있는지 확인하고 버튼 보이기/숨기기 ▼▼▼
+            // .dm-compact--button은 전개지시 확장이 만드는 원래 버튼 클래스입니다.
+            if ($('.dm-compact--button').length > 0 && $('.dm-compact--button').is(':visible')) {
+                $('#vn-direction-btn').show(); // 확장이 있으면 버튼 보임
+            } else {
+                $('#vn-direction-btn').hide(); // 없으면 버튼 숨김
+            }
+            // ▲▲▲ [여기까지 추가] ▲▲▲
+
+            // [기존 코드]
+            finishedSceneSrc = ""; // ★ 껐다 켜면 기록 리셋!
+            // ... (아래 코드는 그대로 두세요)
+            // ▲▲▲ [여기까지] ▲▲▲
+
             btn.addClass('active'); $('body').addClass('vn-mode-active');
             checkLastMessage(); $('#vn-overlay').fadeIn(200); applyFontSize(CURRENT_FONT_SIZE);
         } else {
@@ -602,6 +747,36 @@ jQuery(document).ready(function () {
     // [4] 이벤트 리스너
     // -------------------------------------------------------
     function stopProp(e) { e.stopPropagation(); }
+
+    // ▼▼▼ 전개지시 버튼 연결 코드 (DOM 납치 패치 적용) ▼▼▼
+    $('#vn-overlay').on('click', '#vn-direction-btn', function(e) {
+        e.stopPropagation(); // 중요: 배경 클릭 방지
+        
+        // 원본 확장 기능의 버튼을 찾습니다.
+        const $originBtn = $('.dm-compact--button');
+        
+        // 버튼이 존재하면 강제로 클릭합니다.
+        if ($originBtn.length > 0) {
+            $originBtn.click();
+
+            // [핵심] 원본 확장이 팝업을 생성할 때까지 아주 잠깐 기다린 후,
+            // 팝업을 채팅창 구석에서 꺼내와서 body(최상위)로 옮겨버립니다.
+            setTimeout(() => {
+                const $popup = $('.dm-compact--popup');
+                if ($popup.length > 0) {
+                    // 팝업이 이미 body에 있지 않다면 옮깁니다
+                    if ($popup.parent()[0] !== document.body) {
+                        $popup.appendTo('body');
+                    }
+                }
+            }, 50); // 0.05초 딜레이 (팝업 생성 시간 확보)
+        } else {
+            if(window.toastr) toastr.warning("Direction Manager 버튼을 찾을 수 없습니다.");
+        }
+    });
+    // ▲▲▲ [여기까지] ▲▲▲
+
+    // (이 아래에는 원래 있던 코드들이 계속 이어집니다...)
     // [추가] 플로팅 메뉴 토글 버튼 기능
     $('#vn-overlay').on('click', '#vn-menu-toggle-btn', function(e) {
         e.stopPropagation(); // 배경 클릭 방지
@@ -631,7 +806,25 @@ jQuery(document).ready(function () {
     $('#vn-overlay').on('click', '.vn-history-close', function(e) { stopProp(e); $('#vn-history-panel').fadeOut(200); });
     $('#vn-overlay').on('click', '#vn-history-panel', function(e) { if (e.target === this) { $('#vn-history-panel').fadeOut(200); } });
 
-    $('#vn-overlay').on('click', '#vn-portrait-mode-toggle', function(e) { stopProp(e); ENABLE_PORTRAIT_MODE = !ENABLE_PORTRAIT_MODE; localStorage.setItem('vnModePortrait', ENABLE_PORTRAIT_MODE); updatePortraitToggleState(); setTimeout(checkLastMessage, 100); });
+    // [★수정] JS 러너 버튼 클릭 이벤트 (숨김/표시 방식으로 변경)
+    $('#vn-overlay').on('click', '#vn-js-runner-toggle', function(e) { 
+        stopProp(e); 
+        ENABLE_JS_RUNNER = !ENABLE_JS_RUNNER; 
+        localStorage.setItem('vnModeJsRunner', ENABLE_JS_RUNNER); 
+        updateJsRunnerToggleState();
+        
+        if (!ENABLE_JS_RUNNER) {
+            // 끄면: 삭제하지 않고 숨깁니다 (내용 보존)
+            $('.vn-js-popup-window').hide();
+        } else {
+            // 켜면:
+            // 1. 숨겨뒀던 창들을 다시 보여줍니다.
+            $('.vn-js-popup-window').show();
+            
+            // 2. 혹시 꺼져있을 때 새로 도착한 메시지가 있다면 스캔해서 창으로 만듭니다.
+            setTimeout(checkLastMessage, 100);
+        }
+    });
     $('#vn-overlay').on('click', '#vn-bgm-toggle-btn', function(e) { stopProp(e); $('#vn-bgm-panel').fadeToggle(100); });
     $('#vn-overlay').on('click', '#vn-bgm-panel', stopProp);
     $('#vn-overlay').on('click', '#vn-bgm-play-pause', function(e) { stopProp(e); if (currentBgmIndex === -1 && bgmPlaylist.length > 0) playBgm(0); else if (currentBgmIndex !== -1) { if (bgmAudio.paused) { bgmAudio.play(); isBgmPlaying = true; } else { bgmAudio.pause(); isBgmPlaying = false; } updateBgmUI(); } });
@@ -683,16 +876,126 @@ jQuery(document).ready(function () {
     // -------------------------------------------------------
     function openVN(dataArray) {
         if (!isVnModeOn) return;
+        
+        // ▼▼▼ [추가] 대화가 시작되면 QR 버튼도 숨겨라! ▼▼▼
+        $('#vn-qr-area').hide();
+        // ▲▲▲
+        
         $('#vn-input-area').hide(); $('#vn-text-content').show(); $('#vn-indicator').show(); $('#vn-choice-area').empty().hide();
         vnParagraphs = (dataArray && dataArray.length > 0) ? dataArray : [{ text: "...", img: null, bg: null }];
         vnStep = 0; renderText();
     }
+	
+	// -------------------------------------------------------
+    // [추가] 퀵 리플라이(QR) 연동 함수
+    // -------------------------------------------------------
+    function loadVNQuickReplies() {
+        const $vnQrArea = $('#vn-qr-area');
+        const $originalBar = $('#qr--bar'); // 원본 QR 확장의 바 ID
 
+        // 영역 초기화
+        $vnQrArea.empty();
+
+        // 원본 QR 바가 존재하는지 확인
+        if ($originalBar.length > 0) {
+            // 원본에서 현재 보이는 버튼들만 복사해옴
+            // .qr--button 클래스는 style - 복사본.css에서 확인됨
+            $originalBar.find('.qr--button').each(function() {
+                const $origBtn = $(this);
+                
+                // 숨겨진 버튼은 제외하고 화면에 보이는 것만
+                if ($origBtn.css('display') !== 'none' && $origBtn.parents('.qr--hidden').length === 0) {
+                    const label = $origBtn.text().trim();
+                    const iconHtml = $origBtn.find('.qr--button-icon').html() || ''; // 아이콘이 있다면 가져옴
+                    
+                    // VN 모드용 버튼 생성
+                    const $newBtn = $('<div class="vn-qr-button"></div>');
+                    if(iconHtml) $newBtn.append(`<span style="margin-right:4px;">${iconHtml}</span>`);
+                    $newBtn.append(`<span>${label}</span>`);
+
+                    // 클릭 이벤트 연결 (VN 버튼 누르면 -> 원본 버튼 클릭한 효과)
+                    $newBtn.on('click', function(e) {
+                        e.stopPropagation(); // VN 모드 클릭 이벤트 전파 방지
+                        
+                        // 원본 버튼 클릭 트리거
+                        $origBtn.click();
+                        
+                        // 만약 QR이 즉시 전송하는 타입이라면 VN 모드에서도 처리
+                        // (약간의 딜레이를 주어 입력창이 닫히는 동작 등과 충돌 방지)
+                        setTimeout(() => {
+                            // 입력창에 텍스트가 들어갔는지 확인 후 전송 처리 등은
+                            // QR 확장 자체 설정에 따르므로 여기선 클릭만 전달하면 충분함
+                        }, 50);
+                    });
+
+                    $vnQrArea.append($newBtn);
+                }
+            });
+        }
+    }
+
+    // [수정 1/2] 텍스트 출력 메인 함수 (대기 로직 담당)
     function renderText() {
         if (vnStep >= vnParagraphs.length) return; 
+
+        // ---------------------------------------------------
+        // [A] 장면(Scene) 끄기 로직 (Fade Out -> 대기 -> 재실행)
+        // ---------------------------------------------------
+        if (vnSceneCounter >= 3 && activeSceneSrc !== "") {
+            console.log("[VN Mode] Scene Finished. Hiding...");
+            const $layer = $('#vn-scene-overlay-layer');
+            const $img = $('#vn-scene-overlay-img');
+            
+            // 1. 졸업 도장 찍고 변수 초기화
+            finishedSceneSrc = activeSceneSrc; 
+            activeSceneSrc = ""; 
+            vnSceneCounter = 0;
+
+            // 2. 텍스트창 비우고 이름표 숨김 (완전히 사라짐)
+            $('#vn-text-content').text(""); 
+            $('#vn-name-label').fadeOut(200);
+
+            // 3. 이미지 서서히 사라짐 (Fade Out)
+            $img.css('opacity', 0); 
+            
+            // 4. ★ 핵심: 1초(1000ms) 동안 아무것도 안 하고 기다림!
+            setTimeout(() => {
+                $layer.hide();
+                $img.attr('src', '');
+                // 5. 애니메이션 끝나면 다시 renderText를 호출해서 문장 출력 시작
+                renderText(); 
+            }, 1000); 
+
+            return; // ★ 여기서 함수 강제 종료 (대기 모드)
+        }
+
         const currentData = vnParagraphs[vnStep];
+
+        // ---------------------------------------------------
+        // [B] 장면(Scene) 켜기 로직 (Fade In -> 대기 -> 출력)
+        // ---------------------------------------------------
+        if (currentData.scene) {
+            // playSceneEffect가 true를 반환하면 "새로운 씬이 켜지는 중"이라는 뜻
+            const isAnimating = playSceneEffect(currentData.scene);
+            
+            if (isAnimating) {
+                // ★ 1초(1000ms) 대기 후 나머지 내용 출력 (continueRender 호출)
+                setTimeout(() => {
+                    continueRender(currentData);
+                }, 1000);
+                return; // ★ 여기서 함수 강제 종료 (대기 모드)
+            }
+        }
+
+        // 애니메이션이 없으면 바로 출력
+        continueRender(currentData);
+    }
+
+    // [수정 2/2] 실제 화면 표시 함수 (renderText에서 분리됨)
+    function continueRender(currentData) {
+        // 기존 renderText의 하단부 로직을 여기로 옮김
         
-        // 스킵 중인데 선택지가 있으면 스킵 멈춤
+        // 스킵 체크
         if (isSkipping && currentData.choices && currentData.choices.length > 0) {
             isSkipping = false;
             updateSkipUI();
@@ -700,23 +1003,24 @@ jQuery(document).ready(function () {
 
         if (currentData.bg) changeBackground(currentData.bg);
         if (currentData.img) changeSprite(currentData.img);
-
+        
+        // BGM 처리
         if (currentData.bgm) {
-            if (currentData.bgm.type === 'stop') { stopBgm(); console.log("[VN Mode] 🛑 BGM Stopped via tag."); } 
+            if (currentData.bgm.type === 'stop') { stopBgm(); } 
             else if (currentData.bgm.type === 'play') {
                 const targetName = currentData.bgm.name.toLowerCase();
                 const foundIndex = bgmPlaylist.findIndex(track => track.name.toLowerCase() === targetName);
-                if (foundIndex !== -1) { playBgm(foundIndex); console.log(`[VN Mode] 🎵 Auto-playing BGM: ${currentData.bgm.name}`); } 
-                else { console.warn(`[VN Mode] ❌ BGM not found: ${currentData.bgm.name}`); }
+                if (foundIndex !== -1) { playBgm(foundIndex); } 
             }
         }
 
+        // 비디오 처리
         if (currentData.video) {
-            console.log(`[VN Mode] 🎬 Playing Scene: ${currentData.video}`);
             playSceneVideo(currentData.video, function() { currentData.video = null; renderText(); });
             return; 
         }
 
+        // 빈 줄 처리
         const hasChoices = currentData.choices && currentData.choices.length > 0;
         if ((!currentData.text || currentData.text.trim() === "") && !hasChoices) {
             vnStep++; 
@@ -724,7 +1028,10 @@ jQuery(document).ready(function () {
             return; 
         }
 
-        $('#vn-choice-area').empty().hide(); typeText(currentData.text, currentData.choices);
+        // 텍스트 타이핑 시작
+        $('#vn-choice-area').empty().hide(); 
+        $('#vn-text-content').show(); // 혹시 숨겨져 있었다면 보이기
+        typeText(currentData.text, currentData.choices);
     }
 
     function playSceneVideo(url, callback) {
@@ -739,7 +1046,14 @@ jQuery(document).ready(function () {
     function finishStory() {
         // 스토리 끝나면 스킵 끄기
         if (isSkipping) { isSkipping = false; updateSkipUI(); }
-        $('#vn-text-content').hide(); $('#vn-indicator').hide(); $('#vn-input-area').css('display', 'flex'); $('#vn-user-input').focus();
+        $('#vn-text-content').hide(); $('#vn-indicator').hide(); $('#vn-input-area').css('display', 'flex'); 
+        
+        // ▼▼▼ [수정] QR 로드하고 + 눈에 보이게 켜주기(Show) ▼▼▼
+        loadVNQuickReplies(); 
+        $('#vn-qr-area').css('display', 'flex'); // ★ 이 줄이 꼭 있어야 합니다!
+        // ▲▲▲
+        
+        $('#vn-user-input').focus();
     }
 
     // [수정된 배경 변경 함수] - 미리 로딩 후 부드러운 전환 (Cross-fade)
@@ -836,10 +1150,16 @@ jQuery(document).ready(function () {
         else { typeNext(); }
     }
 
-    // 다음 단계 진행 공통 함수
+    // [수정됨] 클릭할 때마다 카운터를 올리는 함수
     function proceedNextStep() {
-        if ($('#vn-choice-area').css('display') !== 'none') return; // 선택지 있으면 클릭으로만 진행
+        if ($('#vn-choice-area').css('display') !== 'none') return; 
         
+        // ★ 핵심 변경: 다음 줄로 넘어갈 때, Scene이 켜져 있으면 숫자를 1 올림
+        if ($('#vn-scene-overlay-layer').is(':visible')) {
+            vnSceneCounter++;
+            console.log("[VN Mode] Scene Count Up:", vnSceneCounter);
+        }
+
         vnStep++; 
         if (vnStep < vnParagraphs.length) { 
             renderText(); 
@@ -856,7 +1176,17 @@ jQuery(document).ready(function () {
             $area.append($btn);
         });
         const $directBtn = $('<div class="vn-choice-btn direct-input">✍️ 직접 입력하기</div>');
-        $directBtn.on('click', function(e) { e.stopPropagation(); $area.hide(); $('#vn-text-content').hide(); $('#vn-indicator').hide(); $('#vn-input-area').css('display', 'flex'); $('#vn-user-input').focus(); });
+        $directBtn.on('click', function(e) { 
+    e.stopPropagation(); 
+    $area.hide(); 
+    $('#vn-text-content').hide(); 
+    $('#vn-indicator').hide(); 
+    $('#vn-input-area').css('display', 'flex'); 
+    
+    loadVNQuickReplies(); 
+    $('#vn-qr-area').css('display', 'flex'); // ★ 여기도 켜주는 코드 추가
+    $('#vn-user-input').focus();
+});
         $area.append($directBtn); $area.css('display', 'flex'); 
     }
 
@@ -891,7 +1221,43 @@ jQuery(document).ready(function () {
         $layer.append($newImg); setTimeout(() => { $oldActive.remove(); }, 600);
     }
 
+    // [수정] Scene 시작 함수 (애니메이션 여부를 반환하도록 변경)
+    function playSceneEffect(src) {
+        // 1. 졸업한 이미지 체크 (이전 로직 유지)
+        if (finishedSceneSrc !== "" && src !== finishedSceneSrc) {
+             finishedSceneSrc = "";
+        }
+        
+        // 이미 본 거거나, 이미 켜져 있는 거면 -> 애니메이션 안 함(false 반환)
+        if (src === finishedSceneSrc) return false;
+        if (src === activeSceneSrc && $('#vn-scene-overlay-layer').is(':visible')) return false;
+
+        console.log("[VN Mode] 🎬 New Scene Started:", src);
+        
+        activeSceneSrc = src;
+        vnSceneCounter = 0;
+        
+        const $layer = $('#vn-scene-overlay-layer');
+        const $img = $('#vn-scene-overlay-img');
+        
+        // ★ 텍스트 즉시 비우기 (타이핑 시작 전 깨끗하게)
+        $('#vn-text-content').text(""); 
+        $('#vn-name-label').hide(); 
+
+        $img.attr('src', src).css('opacity', 0);
+        $layer.show();
+
+        // 1초 동안 서서히 켜짐
+        setTimeout(() => { $img.css('opacity', 1); }, 50);
+
+        // "나 지금 애니메이션 시작했어!" 라고 알려줌
+        return true; 
+    }
+
     function sendUserMessage(msg = null) {
+        // ▼▼▼ [이 줄을 추가하세요] ▼▼▼
+        finishedSceneSrc = ""; 
+        // ▲▲▲ [여기까지] ▲▲▲
         let inputVal = msg;
         if (!inputVal) { inputVal = $('#vn-user-input').val(); }
         const trimmedInput = inputVal.trim();
@@ -912,13 +1278,105 @@ jQuery(document).ready(function () {
         if (isUser === "true" && !ENABLE_USER_SPRITE) { $('#vn-text-content').text("..."); return; }
 
         const messageContentDiv = lastMsgElement.find('.mes_text');
-        let parsedSegments = []; let tempActiveImg = null; let tempActiveBg = null; let targetSource = messageContentDiv;
+		// ▼▼▼ [통합 수정] JS 러너 연동 로직 (중복 제거 및 첫 번째 스크립트 버그 수정) ▼▼▼
+        
+        // 1. 현재 메시지 박스(.mes) 자체를 찾습니다.
+        const $messageRow = messageContentDiv.closest('.mes');
+        const messageId = $messageRow.attr('mesid');
+        
+        // 2. 이미 창으로 띄운 메시지인지 확인합니다. (재실행 방지)
+        const isAlreadyProcessed = $messageRow.hasClass('vn-script-processed');
+
+        // 3. 스크립트 찾기 (.TH-render가 있으면 그걸 쓰고, 없으면 iframe을 찾음)
+        let $jsRunnerContent = messageContentDiv.find('.TH-render');
+        if ($jsRunnerContent.length === 0) {
+            $jsRunnerContent = messageContentDiv.find('iframe[id^="TH-message"]');
+        }
+
+        // [★수정] 모바일이 아니고, JS 설정이 켜져 있을 때만 실행
+        if ($jsRunnerContent.length > 0 && !isMobileDevice() && ENABLE_JS_RUNNER) {
+            // [A] 새로운 스크립트가 발견됨!
+            
+            // 이미 처리된 메시지가 아니라면 창을 새로 띄웁니다.
+            if (!isAlreadyProcessed) {
+                console.log("[VN Mode] New Script found in message " + messageId);
+
+                // 기존에 떠 있던 창들은 이제 필요 없으니 싹 지웁니다.
+                $('.vn-js-popup-window').remove();
+                
+                // 다른 메시지의 도장은 지우고, 현재 메시지에 '처리 완료' 도장을 찍습니다.
+                $('.mes').removeClass('vn-script-processed'); 
+                $messageRow.addClass('vn-script-processed');
+
+                // 발견된 모든 스크립트(여러 개일 수 있음)를 순서대로 창으로 만듭니다.
+                $jsRunnerContent.each(function(index) {
+                    const $el = $(this);
+                    
+                    // ID 및 위치 설정
+                    const contentId = $el.attr('id') || 'th-gen-' + messageId + '-' + index;
+                    const windowId = 'vn-js-win-' + contentId;
+
+                    // 저장된 위치 불러오기 (없으면 계단식으로 배치)
+                    const savedPosKey = 'vnModeJsWindowPos_' + index;
+                    const savedPos = localStorage.getItem(savedPosKey);
+                    
+                    let initialTop = 100 + (index * 40);
+                    let initialLeft = 100 + (index * 40);
+
+                    if (savedPos) {
+                        try {
+                            const pos = JSON.parse(savedPos);
+                            initialTop = pos.top;
+                            initialLeft = pos.left;
+                        } catch(e) {}
+                    }
+
+                    // 창 HTML 생성 (투명 배경)
+                    const windowHtml = `
+                        <div id="${windowId}" class="vn-js-popup-window" style="top: ${initialTop}px; left: ${initialLeft}px;" title="더블클릭: 최소화/복구, 드래그: 이동">
+                            <div class="vn-js-content"></div>
+                        </div>
+                    `;
+
+                    // body에 창 추가
+                    const $newWindow = $(windowHtml).appendTo('body');
+
+                    // ★ 핵심: 채팅창에 있던 스크립트 요소를 팝업 창으로 이동시킵니다.
+                    $el.appendTo($newWindow.find('.vn-js-content'));
+                    
+                    // 드래그 및 기능 부여
+                    setupWindowFeatures($newWindow, index);
+                });
+            }
+            // 이미 처리된 메시지라면(isAlreadyProcessed === true), 창이 이미 떠 있으므로 아무것도 안 합니다.
+
+        } else {
+            // [B] 스크립트가 없는 메시지인 경우
+            
+            // 만약 '처리 완료' 도장도 없다면 -> 진짜 스크립트 없는 평범한 대사
+            if (!isAlreadyProcessed) {
+                // 기존에 떠 있던 창이 있다면 닫습니다. (새 대화가 시작되었으므로)
+                if ($('.vn-js-popup-window').length > 0) {
+                    $('.vn-js-popup-window').remove();
+                }
+                // 혹시 모르니 도장도 초기화
+                $('.mes').removeClass('vn-script-processed');
+            }
+            // 만약 도장은 있는데 내용은 없다? -> JS 러너가 내부적으로 리렌더링 중일 수 있으므로 창을 닫지 않고 둡니다.
+        }
+        // ▲▲▲ [여기까지 수정 완료] ▲▲▲
+        // [수정] tempActiveScene 변수 추가
+        let parsedSegments = []; let tempActiveImg = null; let tempActiveBg = null; let tempActiveScene = null; let targetSource = messageContentDiv;
         
         const translatedBlock = messageContentDiv.find('.translated_text'); 
         if (translatedBlock.length > 0) targetSource = translatedBlock;
 
         targetSource.contents().each(function() {
-            const node = $(this); 
+            const node = $(this);
+            
+            // [★추가] JS 러너 스크립트 태그나 껍데기가 보이면 텍스트로 출력하지 않고 건너뜀
+            if (node.hasClass('TH-render') || node.is('iframe') || node.find('.TH-render').length > 0) return;
+
             let foundImg = null;
             if (node.is('img')) foundImg = node.attr('src'); else if (node.find('img').length > 0) foundImg = node.find('img').attr('src');
             if (foundImg) { 
@@ -928,17 +1386,21 @@ jQuery(document).ready(function () {
                 // 1. 파일명에 'background-' 또는 'bg-'가 들어가는지 확인 (기존 기능)
                 // 2. 경로에 'output'이 들어가는지 확인 (이미지 생성 시 보통 output 폴더에 저장됨)
                 // 3. 'cache' 폴더나 'data:'(base64) 형태인지 확인
-                if (lowerImg.includes('background-') || 
+                // [수정] Scene 이미지 감지 로직 추가
+                if (lowerImg.includes('scene-')) {
+                    tempActiveScene = foundImg; // 'scene-'이 포함되면 Scene으로 저장
+                }
+                else if (lowerImg.includes('background-') || 
                     lowerImg.includes('bg-') || 
                     lowerImg.includes('user/images') || 
                     lowerImg.includes('cache') ||
                     lowerImg.startsWith('data:') || 
                     lowerImg.startsWith('blob:')) { 
                     
-                    tempActiveBg = foundImg; // 조건에 맞으면 배경으로 설정
+                    tempActiveBg = foundImg; 
                 } 
                 else { 
-                    tempActiveImg = foundImg; // 아니면 캐릭터로 설정
+                    tempActiveImg = foundImg; 
                 }
             }
 
@@ -970,7 +1432,16 @@ jQuery(document).ready(function () {
                         if (videoMatch) { lineVideo = videoMatch[1].trim(); lineText = lineText.replace(/\{\{scene-m\s*:\s*(.*?)\}\}/gi, ""); }
                         const imgToUse = (!ENABLE_USER_SPRITE && isUser === "true") ? null : tempActiveImg;
                         const myChoices = (idx === lines.length - 1) ? extractedChoices : null;
-                        parsedSegments.push({ text: lineText.trim(), img: imgToUse, bg: tempActiveBg, bgm: lineBgm, video: lineVideo, choices: myChoices });
+                        // [수정] scene 정보 추가 (첫 번째 줄에서만 실행되도록 idx === 0 체크)
+                        parsedSegments.push({ 
+                            text: lineText.trim(), 
+                            img: imgToUse, 
+                            bg: tempActiveBg, 
+                            scene: (idx === 0 ? tempActiveScene : null), 
+                            bgm: lineBgm, 
+                            video: lineVideo, 
+                            choices: myChoices 
+                        });
                     });
                 }
             }
@@ -1030,6 +1501,7 @@ jQuery(document).ready(function () {
     // -------------------------------------------------------
     // [★ FIX] 캐릭터 변경 시 잔상 제거 (화면 초기화 로직)
     // -------------------------------------------------------
+    // [★ FIX] 화면 초기화 로직
     function resetVisualState() {
         // 1. 상태 변수 초기화
         currentBgSrc = "";
@@ -1037,13 +1509,19 @@ jQuery(document).ready(function () {
         currentRightSrc = "";
         lastUserPrompt = "";
         
+        activeSceneSrc = "";   // 현재 씬 초기화
+        finishedSceneSrc = ""; // [★추가] 졸업 도장도 초기화 (새 대화 시작이니까)
+
         // 2. 화면 요소 즉시 제거
-        $('#vn-background-layer').css('background-image', 'none'); // 배경 제거
-        $('#vn-sprite-layer').empty();      // 스프라이트(캐릭터) 제거
-        $('#vn-name-label').hide();         // 이름표 숨김
-        $('#vn-text-content').text("...");  // 대화창 텍스트 초기화
+        $('#vn-background-layer').css('background-image', 'none'); 
+        $('#vn-sprite-layer').empty();
+        $('#vn-name-label').hide();
+        $('#vn-text-content').text("...");
+        $('#vn-scene-overlay-layer').hide(); 
+		// [수정] 모든 JS 팝업 창 제거
+        $('.vn-js-popup-window').remove();
         
-        console.log("[VN Mode] Visual State Reset (Character Switched)");
+        console.log("[VN Mode] Visual State Reset");
     }
 
     const translationObserver = new MutationObserver((mutations) => {
@@ -1622,8 +2100,13 @@ jQuery(document).ready(function () {
         });
     }
 
+    // [수정됨] 주기적으로 설정을 강제 적용하여 버튼 크기 문제 해결
     setInterval(() => {
         injectSpriteSliders();
+        
+        // ★ 이 줄이 추가되었습니다! 화면에 버튼이 생긴 뒤 설정을 다시 적용해줍니다.
+        applyAllSettings(); 
+
         const sprites = document.querySelectorAll('.vn-character-sprite');
         sprites.forEach(img => {
             if (img.src && (img.src.includes('user') || img.src.includes('User') || img.src.includes('avatar'))) {
