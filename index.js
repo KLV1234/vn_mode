@@ -1463,7 +1463,16 @@ jQuery(document).ready(function () {
         }, 100);
     });
     $('#vn-overlay').on('click', '#vn-user-sprite-toggle', function(e) { stopProp(e); ENABLE_USER_SPRITE = !ENABLE_USER_SPRITE; localStorage.setItem('vnModeUserSprite', ENABLE_USER_SPRITE); updateToggleButtonState(); $('#vn-sprite-layer').empty(); currentLeftSrc = ""; currentRightSrc = ""; setTimeout(checkLastMessage, 100); });
-    
+    // [★추가] 초상화 모드 토글 버튼 클릭 이벤트
+    $('#vn-overlay').on('click', '#vn-portrait-mode-toggle', function(e) { 
+        e.stopPropagation(); 
+        ENABLE_PORTRAIT_MODE = !ENABLE_PORTRAIT_MODE; 
+        localStorage.setItem('vnModePortrait', ENABLE_PORTRAIT_MODE); 
+        updatePortraitToggleState(); 
+        
+        // 모드 변경 시 이미지 갱신을 위해 현재 메시지 다시 체크
+        setTimeout(checkLastMessage, 50); 
+    });
     // 메인 클릭 이벤트: proceedNextStep 사용
     $('#vn-overlay').on('click', function (e) {
         if ($(e.target).closest('#vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container, .vn-choice-btn, #vn-video-layer, #vn-history-btn, #vn-history-panel, #vn-saveload-panel, #vn-bottom-controls').length > 0) return;
