@@ -1,6 +1,6 @@
-// VN Mode Script v6.2.1 - Skip Button Moved to Bottom
+// VN Mode Script v6.2.2 - Rarity Images Added
 jQuery(document).ready(function () {
-    console.log("[VN Mode] Loading Extension v6.2.1 (Skip Button Relocated)...");
+    console.log("[VN Mode] Loading Extension v6.2.2 (Rarity Images Added)...");
 
     // [상태 변수]
     let isVnModeOn = false;
@@ -85,7 +85,27 @@ jQuery(document).ready(function () {
     // -------------------------------------------------------
     const htmlTemplate = `
         <div id="vn-overlay">
-            <div id="vn-background-layer"></div>
+    <div id="vn-ur-cutscene" style="display:none;">
+        <div class="ur-void-bg"></div>
+        <div class="ur-star-field"></div>
+        
+        <div class="ur-magic-circle">
+            <div class="ur-circle-ring"></div>
+            <div class="ur-circle-inner"></div>
+            <div class="ur-circle-core"></div>
+        </div>
+        
+        <div class="ur-holy-rays"></div>
+        <div class="ur-shockwave-prism"></div>
+        
+        <div class="ur-text-container">
+            <div class="ur-main-text" data-text="ULTRA RARE">ULTRA RARE</div>
+            <div class="ur-sub-text">LEGENDARY FOUND</div>
+        </div>
+        
+        <div class="ur-final-flash"></div>
+    </div>
+    <div id="vn-background-layer"></div>
             <div id="vn-sprite-layer"></div>
             <div id="vn-choice-area"></div>
 
@@ -162,12 +182,78 @@ jQuery(document).ready(function () {
                     </div>
                 </div>
             </div>
+			
+			<div id="vn-hud-coin" title="보유 코인">
+                <i class="fa-solid fa-coins"></i> <span id="vn-hud-coin-val">0</span>
+            </div>
 
             <div id="vn-close-btn" title="Close Mode">X</div>
-            
-            <div id="vn-preset-container">
-                <button id="vn-preset-toggle-btn" title="Theme Settings"><i class="fa-solid fa-palette"></i> Theme</button>
-                <div id="vn-preset-panel">
+			<div id="vn-new-card-overlay">
+                <div class="vn-new-text">NEW!</div>
+                
+                <div class="vn-new-card-content" id="vn-new-card-zoom-box">
+    <img id="vn-new-card-img" src="">
+    <img id="vn-new-card-rarity-img" src=""> 
+    
+    <div id="vn-new-card-shine" class="holo-effect" style="position:absolute;top:0;left:0;width:100%;height:100%;"></div>
+    <div class="vn-new-card-rarity" id="vn-new-card-rarity-badge">UR</div>
+</div>
+
+                <div class="vn-new-card-title" id="vn-new-card-name">캐릭터 이름</div>
+                
+                <div class="vn-new-tap-msg">(화면을 클릭하여 닫기)</div>
+            </div>
+			<div id="vn-album-zoom-overlay">
+    <img id="vn-album-zoom-img" src="">
+    <img id="vn-album-zoom-rarity" src="">
+    
+    <div class="vn-zoom-msg">Click screen to close</div>
+</div>
+			<div id="vn-gacha-panel">
+                <div class="vn-gacha-header">
+                    <span>🎲 캐릭터 뽑기 (Gacha)</span>
+                    <div class="vn-coin-display"><i class="fa-solid fa-coins"></i> <span id="vn-coin-val">0</span></div>
+                    <div class="vn-gacha-close-btn" onclick="$('#vn-gacha-panel').fadeOut(200)"><i class="fa-solid fa-xmark"></i></div>
+                </div>
+                <div class="vn-gacha-body">
+                    <div id="vn-gacha-message">
+                        ✨ <b>가챠 이용 안내</b> ✨<br>
+                        1. 캐릭터별 ZIP 파일을 등록해주세요. (파일명: gacha-ssr_이름.png)<br>
+                        2. 대화를 통해 코인을 획득하세요. (대화 5번당 10코인)<br>
+                        3. 코인을 사용하여 캐릭터 카드를 뽑아보세요!
+                    </div>
+                    <div class="vn-gacha-controls">
+                        <button class="vn-gacha-btn btn-pull-1" id="vn-pull-1">1회 소환<br><span>💎 10 코인</span></button>
+                        <button class="vn-gacha-btn btn-pull-10" id="vn-pull-10">10회 소환 (연속)<br><span>💎 100 코인</span></button>
+                    </div>
+                    <div class="vn-gacha-actions">
+                        <button class="action-btn btn-album" id="vn-open-album"><i class="fa-solid fa-book-open"></i> 도감 (Album)</button>
+                        <button class="action-btn btn-upload" id="vn-upload-zip-btn"><i class="fa-solid fa-file-zipper"></i> ZIP 등록</button>
+                        <button class="action-btn btn-reset" id="vn-reset-gacha"><i class="fa-solid fa-trash-can"></i> 초기화</button>
+                        <input type="file" id="vn-gacha-zip-input" accept=".zip" style="display:none;">
+                    </div>
+                </div>
+                
+                <div id="vn-gacha-result-area" onclick="$(this).fadeOut(200)"></div>
+                
+                <div id="vn-album-area">
+                    <div class="vn-album-header">
+                        <span>📒 캐릭터 도감</span>
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <span style="font-size:0.8em; color:#aaa;">수집률: <span id="vn-collection-rate" style="color:#FFD700; font-weight:bold;">0%</span></span>
+                            <div class="vn-album-close-btn" onclick="$('#vn-album-area').fadeOut(200)"><i class="fa-solid fa-xmark"></i> 닫기</div>
+                        </div>
+                    </div>
+                    <div class="vn-album-grid" id="vn-album-grid"></div>
+                </div>
+            </div>
+
+<div id="vn-preset-container">
+    <button id="vn-preset-toggle-btn" title="Theme Settings"><i class="fa-solid fa-palette"></i> Theme</button>
+    
+    <button id="vn-gacha-toggle-btn" title="Gacha System"><i class="fa-solid fa-dice"></i> Gacha</button>
+    
+    <div id="vn-preset-panel">
                     <h4>Display Settings</h4>
                     <div class="vn-setting-row" style="margin-bottom: 10px; background: #f9f9f9; padding: 8px; border-radius: 6px; border: 1px solid #eee;">
                         <label style="margin-bottom:5px; font-weight:bold; display:block;">Font Size</label>
@@ -1475,7 +1561,8 @@ jQuery(document).ready(function () {
     });
     // 메인 클릭 이벤트: proceedNextStep 사용
     $('#vn-overlay').on('click', function (e) {
-        if ($(e.target).closest('#vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container, .vn-choice-btn, #vn-video-layer, #vn-history-btn, #vn-history-panel, #vn-saveload-panel, #vn-bottom-controls').length > 0) return;
+        // [수정됨] vn-new-card-overlay 추가됨
+        if ($(e.target).closest('#vn-hud-coin, #vn-input-area, #vn-settings-area, #vn-bgm-panel, #vn-close-btn, #vn-preset-container, .vn-choice-btn, #vn-video-layer, #vn-history-btn, #vn-history-panel, #vn-saveload-panel, #vn-bottom-controls, #vn-gacha-panel, #vn-new-card-overlay').length > 0) return;
         if (lastUserPrompt !== "" || $('#vn-text-content').text() === "...") return;
         if ($('#vn-video-layer').css('display') !== 'none') return;
         
@@ -1872,17 +1959,13 @@ jQuery(document).ready(function () {
 // [VN Mode] Sprite & Dialog & Menu Settings Injector (Fixed & Resizable)
 // ======================================================
 (function() {
-    // 1. 기본값 설정 (크기 조절 변수 추가됨)
+    // 1. 기본값 설정
     const DEFAULTS = {
         charScale: 1.0, charX: 0, charY: 0,
         userScale: 1.0, userX: 0, userY: 0,
         portraitSize: 180,
         dialogY: 40, dialogX: 0, dialogW: 95, dialogH: 250,
-        // [신규] 메뉴 설정
-        menuVisible: 'true', 
-        menuRight: 25,       
-        menuBottom: 25,
-        menuScale: 1.0 // 기본 크기 1배
+        menuVisible: 'true', menuRight: 25, menuBottom: 25, menuScale: 1.0
     };
 
     function getSettings() {
@@ -1898,7 +1981,6 @@ jQuery(document).ready(function () {
             dialogX: localStorage.getItem('vnModeDialogX') || DEFAULTS.dialogX,
             dialogW: localStorage.getItem('vnModeDialogW') || DEFAULTS.dialogW,
             dialogH: localStorage.getItem('vnModeDialogH') || DEFAULTS.dialogH,
-            // 메뉴 설정
             menuVisible: localStorage.getItem('vnModeMenuVisible') ?? DEFAULTS.menuVisible,
             menuRight: localStorage.getItem('vnModeMenuRight') || DEFAULTS.menuRight,
             menuBottom: localStorage.getItem('vnModeMenuBottom') || DEFAULTS.menuBottom,
@@ -1908,26 +1990,14 @@ jQuery(document).ready(function () {
 
     const setVar = (name, val, unit='') => document.documentElement.style.setProperty(name, val + unit);
 
-    // [핵심 수정] !important를 뚫고 스타일을 강제로 적용하는 함수
     function applyMenuSettings(s) {
         const $btn = $('#vn-bottom-controls');
-        const el = $btn[0]; // DOM 요소 직접 선택
-        
+        const el = $btn[0]; 
         if (!el) return;
-
-        // 1. 보이기/숨기기
-        if (s.menuVisible === 'true' || s.menuVisible === true) {
-            $btn.show();
-        } else {
-            $btn.hide();
-        }
-        
-        // 2. 위치 적용 (CSS !important 무시하고 강제 적용)
+        if (s.menuVisible === 'true' || s.menuVisible === true) $btn.show(); else $btn.hide();
         el.style.setProperty('right', s.menuRight + 'px', 'important');
         el.style.setProperty('bottom', s.menuBottom + 'px', 'important');
-
-        // 3. [신규] 크기 적용 (우측 하단 기준 스케일링)
-        el.style.transformOrigin = 'bottom right'; // 구석을 기준으로 커지게
+        el.style.transformOrigin = 'bottom right';
         el.style.transform = `scale(${s.menuScale})`;
     }
 
@@ -1938,7 +2008,6 @@ jQuery(document).ready(function () {
         setVar('--vn-portrait-size', s.portraitSize, 'px');
         setVar('--vn-dialog-y', s.dialogY, 'px'); setVar('--vn-dialog-x', s.dialogX, 'px');
         setVar('--vn-dialog-w', s.dialogW, '%'); setVar('--vn-dialog-h', s.dialogH, 'px');
-
         applyMenuSettings(s);
     }
 
@@ -1976,18 +2045,13 @@ jQuery(document).ready(function () {
         const s = getSettings();
         let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><h5 style="margin:0;">🎨 상세 설정</h5><button id="vn-reset-settings-btn" style="background:#607D8B; color:white; border:none; border-radius:4px; padding:3px 8px; font-size:0.75em; cursor:pointer;">🔄 초기화</button></div>`;
 
-        // [신규] 메뉴 버튼 설정 UI
         html += `<div style="margin-bottom:10px; font-size:0.85em; color:#FF5722; font-weight:bold;">[➕ 플로팅 버튼]</div>`;
         html += createToggleHTML('vn-menu-visible-toggle', '버튼 보이기', s.menuVisible);
-        // 위치 슬라이더
         html += createSliderHTML('vn-menu-right-slider', '우측 여백 (Right)', 0, 350, 5, s.menuRight, 'px');
         html += createSliderHTML('vn-menu-bottom-slider', '하단 여백 (Bottom)', 0, 350, 5, s.menuBottom, 'px');
-        // [추가] 크기 슬라이더
         html += createSliderHTML('vn-menu-scale-slider', '버튼 크기 (Scale)', 0.5, 2.0, 0.1, s.menuScale, 'x');
         
         html += `<hr style="border:1px dashed #ddd; margin:15px 0;">`;
-
-        // 기존 설정들...
         html += `<div style="margin-bottom:10px; font-size:0.85em; color:#0288D1; font-weight:bold;">[💬 대화창]</div>`;
         html += createSliderHTML('vn-dialog-y-slider', '↕ 상하 (Bottom)', 0, 800, 10, s.dialogY, 'px');
         html += createSliderHTML('vn-dialog-x-slider', '↔ 좌우 (Offset)', -800, 800, 10, s.dialogX, 'px');
@@ -2024,7 +2088,6 @@ jQuery(document).ready(function () {
             }
         };
 
-        // [수정] 메뉴 위치/크기 조절 로직 (CSS !important 무시)
         const updateMenuElement = (cssProp, val, unit='px') => {
              const el = document.getElementById('vn-bottom-controls');
              if(el) el.style.setProperty(cssProp, val + unit, 'important');
@@ -2043,7 +2106,6 @@ jQuery(document).ready(function () {
             }
         };
 
-        // [추가] 메뉴 크기 스케일 조절
         const bindMenuScale = (id, storageKey) => {
             const el = document.getElementById(id);
             const valEl = document.getElementById(id + '-val');
@@ -2061,7 +2123,6 @@ jQuery(document).ready(function () {
             }
         };
 
-        // 메뉴 이벤트 연결
         const menuToggle = document.getElementById('vn-menu-visible-toggle');
         if(menuToggle) {
             menuToggle.addEventListener('change', (e) => {
@@ -2076,7 +2137,6 @@ jQuery(document).ready(function () {
         bindMenuControl('vn-menu-bottom-slider', 'bottom', 'vnModeMenuBottom');
         bindMenuScale('vn-menu-scale-slider', 'vnModeMenuScale');
 
-        // 기존 슬라이더 연결
         bindSlider('vn-dialog-y-slider', '--vn-dialog-y', 'vnModeDialogY', 'px');
         bindSlider('vn-dialog-x-slider', '--vn-dialog-x', 'vnModeDialogX', 'px');
         bindSlider('vn-dialog-w-slider', '--vn-dialog-w', 'vnModeDialogW', '%');
@@ -2109,13 +2169,10 @@ jQuery(document).ready(function () {
         });
     }
 
-    // [수정됨] 주기적으로 설정을 강제 적용하여 버튼 크기 문제 해결
+    // [반복 실행 루프] - 설정 유지용
     setInterval(() => {
         injectSpriteSliders();
-        
-        // ★ 이 줄이 추가되었습니다! 화면에 버튼이 생긴 뒤 설정을 다시 적용해줍니다.
-        applyAllSettings(); 
-
+        applyAllSettings();
         const sprites = document.querySelectorAll('.vn-character-sprite');
         sprites.forEach(img => {
             if (img.src && (img.src.includes('user') || img.src.includes('User') || img.src.includes('avatar'))) {
@@ -2123,4 +2180,557 @@ jQuery(document).ready(function () {
             }
         });
     }, 2000);
+
+    // ======================================================
+    // [가챠 시스템 로직] - 초기화 버튼 추가됨
+    // ======================================================
+    
+    // 1. JSZip 라이브러리 체크 및 로드
+    if (typeof JSZip === 'undefined') {
+        $.getScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js')
+            .done(() => console.log("[VN Mode] JSZip 로드 완료"))
+            .fail(() => console.error("[VN Mode] JSZip 로드 실패"));
+    }
+
+    let gachaCoins = 0;
+    let chatMessageCount = 0;
+    let gachaInventory = [];
+    let gachaPool = [];
+    
+    const RATES = { UR: 0.05, SSR: 0.15, SR: 0.30, R: 0.50 };
+    // [New] Rarity Images
+    const RARITY_IMGS = {
+        UR: "https://i.postimg.cc/XvnkZ9Fb/ur.png",
+        SSR: "https://i.postimg.cc/1zMcD40b/ssr.png",
+        SR: "https://i.postimg.cc/nLTYqMK6/sr.png",
+        R: "https://i.postimg.cc/LsvBjhkW/r.png"
+    };
+    
+    // [DB] ZIP 저장 로직
+    const DB_NAME = "VNModeGachaDB";
+    const STORE_NAME = "zipFile";
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onerror = (e) => reject(e);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+        });
+    }
+
+    // 캐릭터별 키 생성
+    function getZipKey() {
+        const context = SillyTavern.getContext();
+        const charId = context.characterId;
+        if (charId === undefined || charId === null) return "common_zip";
+        const char = context.characters[charId];
+        return char && char.avatar ? `zip_${char.avatar}` : "common_zip";
+    }
+
+    async function saveZipToDB(file) {
+        try {
+            const db = await initDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const key = getZipKey();
+            tx.objectStore(STORE_NAME).put(file, key);
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadZipFromDB() {
+        try {
+            const db = await initDB();
+            const tx = db.transaction(STORE_NAME, "readonly");
+            const key = getZipKey();
+            const request = tx.objectStore(STORE_NAME).get(key);
+            request.onsuccess = () => { 
+                if (request.result) {
+                    processZipFile(request.result, true); 
+                } else {
+                    gachaPool = [];
+                    $('#vn-gacha-message').text("등록된 ZIP 파일이 없습니다.");
+                }
+            };
+        } catch (e) { console.error(e); }
+    }
+
+    // [★추가] DB에서 ZIP 삭제 함수
+    async function deleteZipFromDB() {
+        try {
+            const db = await initDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const key = getZipKey();
+            tx.objectStore(STORE_NAME).delete(key);
+            console.log(`[VN Mode] Deleted ZIP for ${key}`);
+        } catch (e) { console.error(e); }
+    }
+
+    // [기본 데이터]
+    function getGachaKey() {
+        const context = SillyTavern.getContext();
+        const charId = context.characterId;
+        if (charId === undefined || charId === null) return null;
+        const char = context.characters[charId];
+        return char ? `vnModeGacha_${char.avatar}` : null;
+    }
+
+    // [수정됨] 저장할 때 '마지막으로 처리한 메시지 ID'도 같이 저장함 (새로고침 버그 방지)
+    function saveGachaData() {
+        const key = getGachaKey();
+        if (!key) return;
+        const data = { 
+            coins: gachaCoins, 
+            count: chatMessageCount, 
+            inventory: gachaInventory,
+            lastMsgId: lastProcessedMsgId // ★ 핵심: 이걸 저장해야 새로고침해도 안 까먹습니다.
+        };
+        localStorage.setItem(key, JSON.stringify(data));
+        // [수정] 저장할 때도 둘 다 업데이트
+        $('#vn-coin-val, #vn-hud-coin-val').text(gachaCoins);
+    }
+
+    // [수정됨] 불러올 때 '마지막 메시지 ID'도 같이 불러옴
+    function loadGachaData() {
+        const key = getGachaKey();
+        if (!key) return;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+            const data = JSON.parse(raw);
+            gachaCoins = data.coins || 0;
+            chatMessageCount = data.count || 0;
+            gachaInventory = data.inventory || [];
+            lastProcessedMsgId = data.lastMsgId || null; // ★ 불러오기
+        } else {
+            gachaCoins = 0; chatMessageCount = 0; gachaInventory = []; lastProcessedMsgId = null;
+        }
+        // [수정] 가챠 패널 안쪽과 메인 화면 표시기 둘 다 업데이트
+        $('#vn-coin-val, #vn-hud-coin-val').text(gachaCoins);
+    }
+
+    window.vnCheat = function(amount) {
+        gachaCoins += amount;
+        saveGachaData();
+        if(window.toastr) toastr.success(`💰 치트 사용! ${amount} 코인 획득!`);
+    };
+
+    let lastProcessedMsgId = null;
+
+    // [수정됨] 새로고침 시 코인 복사 버그 수정 버전
+    function checkGachaProgress() {
+        // 채팅창의 마지막 메시지를 가져옴
+        const lastMsg = $('#chat').children('.mes').last();
+        if (lastMsg.length === 0) return;
+        
+        const msgId = lastMsg.attr('mesid');
+        
+        // [1] 가장 처음 실행될 때 (새로고침 직후) 처리
+        if (lastProcessedMsgId === null) {
+            loadGachaData(); // 일단 저장된 기록을 불러옵니다.
+
+            // 불러왔는데 현재 메시지랑 다르다면? (저장 안 된 상태로 껐다 켰거나 등등)
+            // 이때 코인을 주면 악용되므로, 코인은 주지 않고 '위치'만 갱신합니다.
+            if (lastProcessedMsgId !== msgId) {
+                lastProcessedMsgId = msgId;
+                saveGachaData(); 
+            }
+            return; // 코인 지급 없이 종료
+        }
+        
+        // [2] 이미 처리한 메시지면 무시
+        if (msgId === lastProcessedMsgId) return;
+        
+        // [3] 진짜 새로운 메시지일 때만 코인 지급
+        lastProcessedMsgId = msgId;
+        gachaCoins += 1; 
+        if(window.toastr) toastr.success("💰 코인 획득! (+1)");
+        
+        // 데이터 저장
+        saveGachaData();
+    }
+
+    function processZipFile(file, isSilent = false) {
+        if (typeof JSZip === 'undefined') return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            JSZip.loadAsync(evt.target.result).then(function(zip) {
+                // [수정] 임시 보관함을 만듭니다 (실시간 반영 X)
+                let tempPool = []; 
+                let loadPromises = [];
+                zip.forEach(function (relativePath, zipEntry) {
+                    if (zipEntry.name.match(/\.(png|jpg|jpeg|gif)$/i)) {
+                        const fileName = zipEntry.name.split('/').pop();
+                        if (!fileName.startsWith('gacha-')) return;
+                        const parts = fileName.split('_');
+                        const rarityPart = parts[0].split('-')[1];
+                        const rawName = parts[1] ? parts[1].split('.')[0] : "Unknown";
+                        const rarity = rarityPart ? rarityPart.toUpperCase() : 'R';
+                        let p = zipEntry.async("base64").then(function (data64) {
+                            // [수정] 임시 보관함에 먼저 넣습니다
+                            tempPool.push({ name: fileName, displayName: rawName, rarity: rarity, src: "data:image/png;base64," + data64 });
+                        });
+                        loadPromises.push(p);
+                    }
+                });
+                
+                // [수정] 모든 로딩이 끝난 뒤에 한번에 gachaPool로 옮깁니다
+                Promise.all(loadPromises).then(() => {
+                    gachaPool = tempPool; 
+                    
+                    if (!isSilent && window.toastr) toastr.success(`ZIP 로드 완료! ${gachaPool.length}장`);
+                    $('#vn-gacha-message').text(`준비됨! ${gachaPool.length}장의 카드가 로드되었습니다.`);
+                    if (!isSilent) saveZipToDB(file);
+                    
+                    // [추가] 앨범이 열려있는 상태라면, 로딩 끝나자마자 화면을 갱신해줍니다.
+                    if ($('#vn-album-area').is(':visible')) {
+                        openAlbum();
+                    }
+                });
+            });
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    $(document).off('change', '#vn-gacha-zip-input').on('change', '#vn-gacha-zip-input', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        processZipFile(file, false);
+        $(this).val('');
+    });
+
+    // [New 카드 연출 대기열]
+    let newCardQueue = [];
+
+    // [★수정완료] 카드 대기열 처리 함수 (GOD TIER 연출 적용됨)
+    function processNewCardQueue(finalCallback) {
+        // 대기열이 비었으면 종료
+        if (newCardQueue.length === 0) {
+            $('#vn-new-card-overlay').fadeOut(200);
+            if(finalCallback) finalCallback();
+            return;
+        }
+
+        // 1. 카드를 먼저 꺼냅니다. (순서 중요!)
+        const card = newCardQueue.shift(); 
+        
+        // 2. 화면 세팅 (이미지, 이름, 등급 등)
+        $('#vn-new-card-img').attr('src', card.src);
+        $('#vn-new-card-name').text(card.displayName);
+        $('#vn-new-card-rarity-img').attr('src', RARITY_IMGS[card.rarity] || RARITY_IMGS['R']);
+        
+        const $badge = $('#vn-new-card-rarity-badge');
+        $badge.text(card.rarity);
+        $badge.removeClass('badge-ur badge-ssr badge-sr badge-r').addClass('badge-' + card.rarity.toLowerCase());
+
+        const $zoomBox = $('#vn-new-card-zoom-box');
+        $zoomBox.removeClass('holo-base holo-ur holo-ssr holo-sr border-ur border-ssr border-sr border-r');
+        $zoomBox.addClass('border-' + card.rarity.toLowerCase());
+
+        // 홀로그램 효과 추가
+        if (['UR', 'SSR', 'SR'].includes(card.rarity)) {
+            $zoomBox.addClass('holo-base holo-' + card.rarity.toLowerCase());
+        }
+
+        // ===============================================
+        // [★GOD TIER] UR 연출 로직 (3.5초)
+        // ===============================================
+        if (card.rarity === 'UR') {
+            const $cutscene = $('#vn-ur-cutscene');
+            
+            // 1) 컷신 레이어 켜기 (화면 흔들림 등 시작)
+            $cutscene.css('display', 'flex');
+            
+            // 2) ★ 3.5초 동안 숨 참기 (CSS 애니메이션 시간과 동기화)
+            setTimeout(() => {
+                // 3) 컷신 끄기
+                $cutscene.hide();
+                
+                // 4) 카드 등장 (페이드인)
+                $('#vn-new-card-overlay').css('display', 'flex').hide().fadeIn(400);
+            }, 3500); 
+
+        } else {
+            // UR이 아니면 바로 보여줌
+            $('#vn-new-card-overlay').css('display', 'flex').hide().fadeIn(200);
+        }
+
+        // 3. 클릭하면 다음 카드로 넘어가는 기능 연결
+        $('#vn-new-card-overlay').off('click').on('click', function(e) {
+            e.stopPropagation(); e.preventDefault();
+            $(this).fadeOut(150, function() { processNewCardQueue(finalCallback); });
+        });
+    }
+
+    function doGacha(pullCount) {
+        // [★긴급 수정] 뽑기 버튼 눌렀을 때도 내 지갑(저장된 코인)부터 확인하기
+        loadGachaData();
+
+        if (gachaPool.length === 0) { if(window.toastr) toastr.warning("ZIP 파일 로드 필요"); return; }
+        const cost = pullCount * 10;
+        if (gachaCoins < cost) { if(window.toastr) toastr.error("코인 부족!"); return; }
+
+        gachaCoins -= cost;
+        saveGachaData();
+
+        const results = [];
+        newCardQueue = [];
+
+        for (let i = 0; i < pullCount; i++) {
+            const rand = Math.random();
+            let targetRarity = 'R';
+            if (rand < RATES.UR) targetRarity = 'UR';
+            else if (rand < RATES.UR + RATES.SSR) targetRarity = 'SSR';
+            else if (rand < RATES.UR + RATES.SSR + RATES.SR) targetRarity = 'SR';
+
+            let poolSubset = gachaPool.filter(c => c.rarity === targetRarity);
+            if (poolSubset.length === 0) poolSubset = gachaPool.filter(c => c.rarity === 'R');
+            if (poolSubset.length === 0) poolSubset = gachaPool;
+
+            const card = poolSubset[Math.floor(Math.random() * poolSubset.length)];
+            let isNew = false;
+            if (!gachaInventory.includes(card.name)) {
+                gachaInventory.push(card.name);
+                isNew = true;
+                newCardQueue.push(card);
+            }
+            results.push({ ...card, isNew: isNew });
+        }
+        saveGachaData();
+
+        if (newCardQueue.length > 0) {
+            processNewCardQueue(() => { showResults(results); });
+        } else {
+            showResults(results);
+        }
+    }
+
+    function showResults(cards) {
+        const $area = $('#vn-gacha-result-area');
+        $area.empty().css('display', 'flex');
+        
+        cards.forEach((card, idx) => {
+            let holoClass = '';
+            if (['UR', 'SSR', 'SR'].includes(card.rarity)) holoClass = 'holo-base holo-' + card.rarity.toLowerCase();
+            const badgeClass = 'badge-' + card.rarity.toLowerCase();
+            const borderClass = 'border-' + card.rarity.toLowerCase();
+
+            const cardHtml = `
+                <div class="vn-gacha-card ${holoClass} ${borderClass}" style="animation-delay: ${idx * 0.1}s">
+                    ${card.isNew ? '<div class="vn-card-new-badge">NEW</div>' : ''}
+                    <img class="vn-card-img" src="${card.src}">
+                    <img class="vn-card-rarity-img" src="${RARITY_IMGS[card.rarity] || RARITY_IMGS['R']}">
+                </div>
+            `;
+            $area.append(cardHtml);
+        });
+    }
+
+    function openAlbum() {
+        if (gachaPool.length === 0) { if(window.toastr) toastr.warning("카드 없음"); return; }
+        const $grid = $('#vn-album-grid');
+        $grid.empty();
+        
+        let ownedCount = 0;
+        const sortedPool = [...gachaPool].sort((a, b) => {
+            const order = { UR: 4, SSR: 3, SR: 2, R: 1 };
+            return order[b.rarity] - order[a.rarity];
+        });
+
+        sortedPool.forEach(card => {
+            const isOwned = gachaInventory.includes(card.name);
+            if (isOwned) ownedCount++;
+            
+            let holoClass = '';
+            if (isOwned && ['UR', 'SSR', 'SR'].includes(card.rarity)) holoClass = 'holo-base holo-' + card.rarity.toLowerCase();
+            const borderClass = isOwned ? 'border-' + card.rarity.toLowerCase() : 'border-r';
+            
+            // 등급에 맞는 뱃지 색상
+            const badgeClass = 'badge-' + card.rarity.toLowerCase();
+
+            const html = `
+                <div class="vn-album-item ${isOwned ? '' : 'locked'} ${holoClass} ${borderClass}">
+                    <img src="${card.src}" class="vn-card-img">
+                    ${!isOwned ? '<div class="locked-mark">?</div>' : ''}
+                    
+                    <img class="vn-card-rarity-img" src="${RARITY_IMGS[card.rarity] || RARITY_IMGS['R']}">
+                </div>
+            `;
+            $grid.append(html);
+        });
+
+        const rate = Math.round((ownedCount / gachaPool.length) * 100) || 0;
+        $('#vn-collection-rate').text(rate + '%');
+        $('#vn-album-area').css('display', 'flex');
+    }
+
+    // [이벤트]
+	
+// ===============================================
+    // [긴급 수정] 앨범 확대 및 강제 닫기 로직
+    // ===============================================
+    
+    // 1. 열기 (Open)
+    $(document).on('click', '.vn-album-item', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if ($(this).hasClass('locked')) {
+            if(window.toastr) toastr.warning("미보유 카드입니다.");
+            return;
+        }
+
+        const imgSrc = $(this).find('img').attr('src');
+		// ▼▼▼ [여기!] 아래 두 줄을 추가하세요 ▼▼▼
+        // 클릭한 카드 안에 있는 작은 등급 이미지 주소를 가져와서, 큰 화면의 등급 이미지에 넣어줍니다.
+        const raritySrc = $(this).find('.vn-card-rarity-img').attr('src');
+        $('#vn-album-zoom-rarity').attr('src', raritySrc);
+        // ▲▲▲
+        const $overlay = $('#vn-album-zoom-overlay');
+        
+        $('#vn-album-zoom-img').attr('src', imgSrc);
+        
+        // 일단 보이게 하고
+        $overlay.css('display', 'flex');
+        
+        // 살짝 뒤에 투명도 조절 (페이드인)
+        setTimeout(() => {
+            $overlay.addClass('visible');
+        }, 10);
+		// [수정] 몽글몽글 반짝이 생성 로직 (50개로 증가, 무한 반복을 위해 딜레이 조정)
+        const $bg = $('#vn-album-zoom-overlay');
+        // 개수를 30개에서 50개로 늘림
+        for (let i = 0; i < 50; i++) {
+            const size = Math.random() * 6 + 3;   // 크기 다양하게
+            const posX = Math.random() * 100;     // 위치 랜덤
+            const posY = Math.random() * 100;
+            
+            // 무한 반복 시 자연스럽게 하기 위해 딜레이 범위를 넓힘 (0~4초)
+            const delay = Math.random() * 4;      
+            const duration = Math.random() * 2 + 2; // 속도 2~4초
+
+            const $sparkle = $('<div class="vn-zoom-sparkle"></div>').css({
+                width: size + 'px',
+                height: size + 'px',
+                left: posX + '%',
+                top: posY + '%',
+                animationDelay: delay + 's',       // 시작 시간 랜덤
+                animationDuration: duration + 's'  // 떠오르는 속도 랜덤
+            });
+            $bg.append($sparkle);
+        }
+    });
+
+    // 2. 닫기 (Close) - ★ 가장 강력한 클릭 감지 방식 적용
+    // 문서 전체가 아니라 body에 직접 이벤트를 걸어서 우선순위를 높임
+    $('body').on('click', '#vn-album-zoom-overlay', function(e) {
+        // 다른 동작 다 멈추고 닫기만 수행
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation(); 
+
+        const $overlay = $(this);
+        
+        // 투명하게 만들기 (페이드 아웃)
+        $overlay.removeClass('visible');
+
+        // 애니메이션(0.3초) 후 숨김
+        setTimeout(() => {
+            $overlay.hide();
+            $('#vn-album-zoom-img').attr('src', '');
+			// ▼▼▼ [여기!] 이 한 줄을 추가하세요 ▼▼▼
+            $overlay.find('.vn-zoom-sparkle').remove(); // 반짝이 삭제
+            // ▲▲▲
+        }, 300);
+    });
+    // ===============================================
+    
+    // 1. 초기화 버튼 (Reset)
+    $(document).off('click', '#vn-reset-gacha').on('click', '#vn-reset-gacha', async function(e) {
+        e.stopPropagation();
+        if (!confirm("정말 초기화하시겠습니까?\n\n이 캐릭터의 ZIP 파일과 획득한 카드 목록이 모두 삭제됩니다.\n(보유 코인은 유지됩니다)")) return;
+        
+        // 1. 인벤토리 및 풀 비우기
+        gachaInventory = [];
+        gachaPool = [];
+        
+        // 2. 저장 (인벤토리 리셋 반영)
+        saveGachaData();
+        
+        // 3. DB에서 ZIP 삭제
+        await deleteZipFromDB();
+        
+        // 4. UI 갱신
+        $('#vn-gacha-message').text("데이터가 초기화되었습니다. ZIP 파일을 다시 등록해주세요.");
+        if(window.toastr) toastr.info("초기화 완료!");
+    });
+
+    $(document).off('click', '#vn-gacha-toggle-btn').on('click', '#vn-gacha-toggle-btn', function(e) { 
+        e.stopPropagation(); loadGachaData(); loadZipFromDB(); $('#vn-gacha-panel').fadeToggle(200); 
+    });
+    $(document).off('click', '#vn-upload-zip-btn').on('click', '#vn-upload-zip-btn', function() { $('#vn-gacha-zip-input').click(); });
+    $(document).off('click', '#vn-pull-1').on('click', '#vn-pull-1', function() { doGacha(1); });
+    $(document).off('click', '#vn-pull-10').on('click', '#vn-pull-10', function() { doGacha(10); });
+    $(document).off('click', '#vn-open-album').on('click', '#vn-open-album', function() { openAlbum(); });
+    $(document).off('click', '#vn-gacha-panel').on('click', '#vn-gacha-panel', function(e) { e.stopPropagation(); });
+
+    const gachaObserver = new MutationObserver(() => { 
+        setTimeout(() => {
+            loadGachaData(); 
+            loadZipFromDB(); 
+        }, 500); 
+    });
+    const chatElem = document.getElementById('chat');
+    if(chatElem) gachaObserver.observe(chatElem, { childList: true });
+    
+    setTimeout(() => {
+        loadGachaData();
+        loadZipFromDB();
+    }, 1000);
+
+    const msgObserver = new MutationObserver(() => { checkGachaProgress(); });
+    if(chatElem) msgObserver.observe(chatElem, { childList: true, subtree: true });
+
+// ... (기존 가챠 코드들) ...
+
+    // [★추가] 가챠 배경 반짝이 생성 함수
+    function initGachaSparkles() {
+        // 이미 있으면 삭제 (중복 방지)
+        $('#vn-gacha-bg-fx').remove();
+        
+        // 컨테이너 생성 및 가챠 패널 맨 앞에 추가
+        const $fxLayer = $('<div id="vn-gacha-bg-fx"></div>');
+        $('#vn-gacha-panel').prepend($fxLayer);
+
+        // 반짝이 40개 생성
+        for (let i = 0; i < 40; i++) {
+            const size = Math.random() * 6 + 3; // 크기: 3px ~ 9px
+            const posX = Math.random() * 100;   // 위치: 0% ~ 100%
+            const posY = Math.random() * 100;
+            const delay = Math.random() * 5;    // 딜레이: 0초 ~ 5초
+            const duration = Math.random() * 3 + 3; // 속도: 3초 ~ 6초
+
+            const $star = $('<div class="vn-twinkle-star"></div>').css({
+                width: size + 'px',
+                height: size + 'px',
+                left: posX + '%',
+                top: posY + '%',
+                animationDelay: delay + 's',
+                animationDuration: duration + 's'
+            });
+
+            $fxLayer.append($star);
+        }
+    }
+
+    // 초기 실행
+    initGachaSparkles();
+    
+    // [팁] 가챠 버튼 누를 때마다 새로 뿌려주고 싶다면 아래 코드를 추가하세요.
+    $(document).on('click', '#vn-gacha-toggle-btn', function() {
+        initGachaSparkles();
+    });
+
+// 이 부분은 원래 파일의 맨 마지막 줄입니다.
 })();

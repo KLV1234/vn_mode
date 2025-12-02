@@ -20,7 +20,7 @@
     z-index: 99999 !important; background-color: transparent; 
     display: none; /* ★ 매우 중요: 기본적으로 숨김 */
     font-family: 'Jua', 'Noto Sans KR', sans-serif;
-    user-select: none; pointer-events: none; 
+    user-select: none; pointer-events: auto; 
 }
 
 /* --- [좌측 상단 컨트롤] --- */
@@ -317,11 +317,10 @@ body.vn-mode-active #sheld, body.vn-mode-active #top-bar, body.vn-mode-active .d
 /* [수정됨] 모바일 선택지 중앙 정렬 (화면 막힘 해결) */
 /* ========================================= */
 #vn-choice-area {
-    /* ★ display: flex !important; <-- 이 줄을 삭제했습니다! */
-    /* 이제 JS가 필요할 때만 화면에 띄웁니다 */
+    display: none !important; /* ✅ 이 줄을 꼭 추가해주세요! 평소에는 숨겨둡니다. */
 
     flex-direction: column !important;
-    justify-content: center !important; /* 수직 중앙 정렬 */
+    justify-content: center !important;
     align-items: center !important;     /* 수평 중앙 정렬 */
     
     position: fixed !important;
@@ -1122,4 +1121,1183 @@ body.vn-mode-active #chat .TH-collapse-code-block-button {
 .vn-js-popup-window pre,
 .vn-js-popup-window .TH-collapse-code-block-button {
     display: none !important;
+}
+
+/* ========================================= */
+/* [최종] 가챠 시스템 스타일 (파스텔 & 럭셔리 리뉴얼) */
+/* ========================================= */
+
+/* 1. 가챠 버튼 (기존 유지하되 스타일 업그레이드) */
+#vn-gacha-toggle-btn {
+    margin-top: 10px; 
+    background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%); /* 파스텔 핑크 */
+    color: #fff; 
+    border: 2px solid #fff; 
+    padding: 8px 18px; 
+    border-radius: 25px; 
+    cursor: pointer; 
+    font-size: 0.9em; 
+    font-weight: bold; 
+    box-shadow: 0 5px 15px rgba(255, 154, 158, 0.4); 
+    transition: all 0.3s ease; 
+    text-align: center; 
+    display: block;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+#vn-gacha-toggle-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 8px 20px rgba(255, 154, 158, 0.6); }
+#vn-gacha-toggle-btn i { margin-right: 5px; }
+
+/* 2. 가챠 패널 (풀스크린 - 밝은 파스텔 배경) */
+#vn-gacha-panel {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    /* ▼ 배경: 밝은 파스텔 그라데이션 (블루~퍼플~핑크) */
+    background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+    z-index: 110000;
+    color: #555; /* 글자색은 어두운 회색으로 가독성 확보 */
+    font-family: 'Jua', 'Noto Sans KR', sans-serif;
+    flex-direction: column;
+    pointer-events: auto;
+}
+
+/* 배경에 은은한 빛 효과 추가 */
+#vn-gacha-panel::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.8) 0%, transparent 80%);
+    pointer-events: none; z-index: 0;
+}
+
+/* 헤더 */
+.vn-gacha-header {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 30px 50px;
+    background: rgba(255, 255, 255, 0.3); /* 유리 효과 */
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.5);
+    font-size: 1.8em; font-weight: bold; letter-spacing: 1px;
+    color: #6a11cb; text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+}
+.vn-gacha-header span:first-child { color: #FF758C; /* 제목 핑크 */ } 
+
+/* 코인 표시 */
+.vn-coin-display {
+    background: rgba(255, 255, 255, 0.6); 
+    padding: 8px 25px;
+    border-radius: 50px; 
+    border: 2px solid #fff;
+    color: #F7971E; font-size: 0.8em;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* 닫기 버튼 */
+.vn-gacha-close-btn {
+    cursor: pointer; padding: 10px; font-size: 1.2em; 
+    color: #888; transition: all 0.2s;
+    background: rgba(255,255,255,0.5); border-radius: 50%; width: 45px; height: 45px;
+    display: flex; align-items: center; justify-content: center;
+}
+.vn-gacha-close-btn:hover { transform: rotate(90deg); color: #FF5252; background: #fff; }
+
+/* 본문 영역 */
+.vn-gacha-body {
+    position: relative; z-index: 5;
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 40px; overflow-y: auto;
+}
+
+/* 메시지 박스 */
+#vn-gacha-message {
+    margin-bottom: 40px; color: #666; text-align: center; line-height: 1.6;
+    background: rgba(255,255,255,0.7); padding: 25px 40px; border-radius: 20px;
+    border: 3px solid #fff;
+    box-shadow: 0 10px 30px rgba(100,100,255,0.1);
+    font-weight: bold;
+}
+
+/* 컨트롤 버튼 그룹 (뽑기 버튼) */
+.vn-gacha-controls { display: flex; gap: 40px; margin-bottom: 50px; z-index: 10; }
+
+.vn-gacha-btn {
+    padding: 25px 50px; font-size: 1.5em; border: 4px solid #fff; border-radius: 30px;
+    cursor: pointer; font-weight: bold; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: white; position: relative; overflow: hidden;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1), inset 0 0 0 2px rgba(255,255,255,0.2);
+}
+.vn-gacha-btn:hover { transform: translateY(-7px) scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+.vn-gacha-btn:active { transform: scale(0.95); }
+.vn-gacha-btn span { display: block; font-size: 0.6em; margin-top: 8px; opacity: 0.9; font-weight: normal; background: rgba(0,0,0,0.1); padding: 4px 10px; border-radius: 15px; }
+
+/* 1회 뽑기 (블루~민트 계열, 초록X) */
+.btn-pull-1 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+/* 10회 뽑기 (핑크~퍼플 계열) */
+.btn-pull-10 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+
+/* 하단 액션 버튼 그룹 */
+.vn-gacha-actions {
+    display: flex; gap: 15px; justify-content: center;
+    background: rgba(255,255,255,0.5); padding: 15px 30px; border-radius: 50px;
+    border: 1px solid #fff; backdrop-filter: blur(5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+.action-btn {
+    padding: 10px 20px; font-size: 0.95em; border: 1px solid rgba(0,0,0,0.05); border-radius: 20px;
+    cursor: pointer; font-weight: bold; transition: all 0.2s; color: #444;
+    display: flex; align-items: center; gap: 8px; background: #fff;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+}
+.action-btn:hover { transform: translateY(-2px); background: #fdfdfd; box-shadow: 0 5px 12px rgba(0,0,0,0.1); }
+.action-btn i { color: #f5576c; }
+
+/* ========================================= */
+/* [중요] 카드 & 프레임 스타일 (럭셔리 파스텔) */
+/* ========================================= */
+
+/* 결과 화면 */
+#vn-gacha-result-area {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.2); /* 밝은 반투명 */
+    backdrop-filter: blur(15px);
+    z-index: 110050; display: none;
+    flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 40px; padding: 60px; box-sizing: border-box; overflow-y: auto;
+}
+#vn-gacha-result-area::after {
+    content: "화면을 클릭하여 닫기"; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    color: #555; font-size: 1.2em; animation: blink 2s infinite; font-weight:bold;
+    background: rgba(255,255,255,0.8); padding: 8px 20px; border-radius: 20px;
+}
+
+/* 앨범 영역 */
+#vn-album-area {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to top, #dfe9f3 0%, white 100%);
+    z-index: 110040; display: none; flex-direction: column;
+}
+.vn-album-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 40px; background: rgba(255,255,255,0.9); border-bottom: 2px solid #eee;
+    font-size: 1.5em; color: #333; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+/* [수정] 앨범 그리드 정렬 문제 해결 (세로 벌어짐 방지) */
+.vn-album-grid {
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 40px;
+    display: grid; 
+    
+    /* 반응형 컬럼 설정 */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+    
+    /* 카드 사이 간격 */
+    gap: 30px;
+    
+    /* 아이템 가로 중앙 정렬 */
+    justify-items: center;
+
+    /* ★★★ [핵심 수정] ★★★ */
+    /* 내용물이 화면 전체 높이를 쓰더라도, 줄(Row)은 위쪽부터 차곡차곡 쌓이게 강제함 */
+    align-content: start !important; 
+}
+
+/* --- [카드 기본 디자인] --- */
+.vn-gacha-card, .vn-album-item {
+    width: 190px; aspect-ratio: 2/3;
+    background: #fff; border-radius: 15px; position: relative; 
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15); 
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 6px solid #fff; /* 기본 흰색 프레임 */
+    overflow: visible; /* 프레임 효과가 밖으로 나가도록 */
+}
+
+.vn-gacha-card:hover, .vn-album-item:not(.locked):hover {
+    transform: scale(1.1) rotate(2deg);
+    z-index: 50;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+
+.vn-card-img { 
+    width: 100%; height: 100%; object-fit: cover; border-radius: 9px; 
+    display: block; background: #eee;
+}
+
+/* NEW 뱃지 */
+.vn-card-new-badge {
+    position: absolute; top: -12px; left: -12px; 
+    background: linear-gradient(45deg, #ff9a9e, #fad0c4); 
+    color: white; border: 2px solid #fff;
+    font-size: 0.8em; padding: 5px 12px; border-radius: 20px; font-weight: 900; z-index: 20;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    animation: bounceBadge 2s infinite ease-in-out;
+}
+@keyframes bounceBadge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+/* 등급 라벨 */
+.vn-card-label {
+    position: absolute; bottom: -10px; right: 50%; transform: translateX(50%);
+    font-size: 0.9em; padding: 4px 15px; border-radius: 15px; font-weight: 900; letter-spacing: 1px;
+    z-index: 20; white-space: nowrap; border: 2px solid #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* [1] 잠긴 카드 틀 */
+/* 여기엔 필터(블러)를 걸지 않습니다. 그래야 물음표가 선명합니다. */
+.vn-album-item.locked {
+    pointer-events: none;
+    border-color: #eee;
+    background: #f0f0f0;
+    /* overflow: hidden을 쓰면 밑에 달린 이름표가 잘리니 쓰면 안 됩니다! */
+}
+
+/* [2] 잠긴 카드 안의 '이미지'만 콕 집어서 처리 */
+.vn-album-item.locked .vn-card-img {
+    /* 흑백 + 블러 효과 */
+    filter: grayscale(100%) blur(8px); 
+    opacity: 0.6;
+    
+    /* ★ 핵심: 블러가 밖으로 새어나가지 않게 테두리에 맞춰 자르기 */
+    /* 숫자는 기존 카드의 둥글기(border-radius)와 맞춰야 예쁩니다 (9px) */
+    clip-path: inset(0 round 9px); 
+    
+    /* 블러 때문에 테두리가 하얗게 뜨는걸 방지하기 위해 살짝 확대 */
+    transform: scale(1.02);
+}
+
+/* [3] 물음표 스타일 (혹시 몰라 확실하게 맨 위로 올림) */
+.locked-mark {
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%);
+    color: #ccc; 
+    font-size: 4em; 
+    font-weight: bold;
+    z-index: 10; /* 블러된 이미지보다 위에 뜨도록 */
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2); /* 배경이 흐리니 글자에 그림자 추가 */
+}
+
+
+/* ========================================= */
+/* [핵심] 등급별 프레임 & 홀로그램 효과 (무한반복 수정됨) */
+/* ========================================= */
+
+/* --- 공통 홀로그램 베이스 (부드럽게 흐르는 빛) --- */
+/* 끊김 방지를 위해 그라데이션을 길게 늘리고(200% or 400%) linear 애니메이션 사용 */
+.holo-base::after {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(115deg, 
+        transparent 0%, 
+        rgba(255,255,255,0.4) 30%, 
+        transparent 45%,
+        rgba(255,255,255,0.2) 60%,
+        transparent 100%);
+    background-size: 300% 300%;
+    opacity: 0.6; pointer-events: none; z-index: 10; border-radius: 9px;
+    animation: softSheen 4s linear infinite; /* 부드러운 무한 반복 */
+}
+
+/* [수정] 홀로그램 애니메이션 키프레임 (한 방향 반복) */
+@keyframes softSheen { 
+    0% { 
+        background-position: 0% 0%; 
+        opacity: 0.4; /* 시작할 때 약간 흐리게 */
+    } 
+    100% { 
+        background-position: 100% 100%; /* 대각선 아래(오른쪽)로 끝까지 이동 */
+        opacity: 0.4;
+    }
+}
+
+
+/* 1. R 등급 (심플, 브론즈/피치) */
+.border-r { 
+    border-color: #fff !important; 
+    box-shadow: 0 0 0 2px #E6DADA, 0 10px 20px rgba(0,0,0,0.1) !important; /* 2중 테두리 효과 */
+}
+.badge-r { background: #E6DADA; color: #555; }
+
+/* 2. SR 등급 (실버/블루빛, 반짝임) */
+.border-sr {
+    border-color: #fff !important;
+    box-shadow: 0 0 0 3px #B4C6D8, 0 0 15px rgba(180, 198, 216, 0.6) !important;
+}
+.badge-sr { background: linear-gradient(90deg, #cfd9df 0%, #e2ebf0 100%); color: #556; }
+/* SR 전용 홀로그램 */
+.holo-sr::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(125deg, rgba(255,255,255,0) 0%, rgba(137, 247, 254, 0.2) 50%, rgba(255,255,255,0) 100%);
+    background-size: 200% 200%;
+    animation: softSheen 3s linear infinite; /* 반대 방향 흐름 */
+    z-index: 11; pointer-events: none; border-radius: 9px;
+    mix-blend-mode: overlay;
+}
+
+/* 3. SSR 등급 (골드/옐로우, 고급짐) */
+.border-ssr {
+    border-color: #fff !important;
+    /* 금빛 광채 테두리 */
+    box-shadow: 0 0 0 3px #F3E5AB, 0 0 20px rgba(255, 215, 0, 0.5) !important;
+}
+.badge-ssr { background: linear-gradient(to right, #f6d365 0%, #fda085 100%); color: #fff; }
+/* SSR 골드 펄 효과 */
+.holo-ssr::before {
+    content: ""; position: absolute; inset: -5px; 
+    background: radial-gradient(circle, rgba(255,223,64,0.1) 10%, transparent 70%);
+    z-index: 12; pointer-events: none;
+    animation: pulseGold 2s infinite ease-in-out;
+    border-radius: 15px;
+}
+@keyframes pulseGold { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.05); } }
+
+/* ========================================= */
+/* [수정] UR 등급 스타일 (회전 삭제 & 오로라 흐름 효과) */
+/* ========================================= */
+
+/* 4. UR 등급 테두리 (기존 유지) */
+.border-ur {
+    border-color: #fff !important;
+    box-shadow: 0 0 0 4px #ffdde1, 0 0 25px rgba(255, 154, 158, 0.8) !important;
+    animation: borderRainbow 3s linear infinite;
+    /* overflow: hidden;  <-- 이렇게 지우거나 주석 처리하면 됩니다 */
+}
+
+@keyframes borderRainbow {
+    0% { box-shadow: 0 0 0 4px #ff9a9e, 0 0 25px rgba(255, 154, 158, 0.6); }
+    33% { box-shadow: 0 0 0 4px #a18cd1, 0 0 25px rgba(161, 140, 209, 0.6); }
+    66% { box-shadow: 0 0 0 4px #fbc2eb, 0 0 25px rgba(251, 194, 235, 0.6); }
+    100% { box-shadow: 0 0 0 4px #ff9a9e, 0 0 25px rgba(255, 154, 158, 0.6); }
+}
+
+.badge-ur { 
+    background: linear-gradient(to right, #ff9a9e 0%, #fecfef 99%, #a18cd1 100%); 
+    color: #fff; border: 1px solid white; 
+    z-index: 30; 
+}
+
+/* [핵심 수정 1] 회전(conic) 삭제 -> 무지개빛 흐름(linear)으로 변경 */
+.holo-ur::before {
+    content: ""; position: absolute; 
+    top: 0; left: 0; width: 100%; height: 100%;
+    
+    /* 빙글빙글 도는 conic-gradient 대신, 부드러운 대각선 무지개 사용 */
+    background: linear-gradient(115deg, 
+        rgba(255, 154, 158, 0.5), /* 핑크 */
+        rgba(161, 140, 209, 0.5), /* 보라 */
+        rgba(161, 196, 253, 0.5), /* 블루 */
+        rgba(255, 154, 158, 0.5)  /* 다시 핑크 (반복용) */
+    );
+    background-size: 300% 300%; /* 배경을 길게 늘려서 흐르게 함 */
+    
+    z-index: 10;                /* 카드 이미지 위 */
+    opacity: 0.6;               /* 은은하게 */
+    mix-blend-mode: overlay;    /* 이미지와 자연스럽게 섞임 (color-dodge도 가능) */
+    pointer-events: none;
+    
+    /* ★ 회전(spinSlow) 삭제하고, 아까 만든 흐름(softSheen) 적용 */
+    animation: softSheen 3s linear infinite; 
+}
+
+/* [핵심 수정 2] 표면 광택 (흰색 빛 스윕) */
+.holo-ur::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    
+    /* 흰색 광택이 쓱 지나가는 효과 */
+    background: linear-gradient(125deg, 
+        transparent 0%, 
+        rgba(255,255,255,0.4) 40%, 
+        rgba(255,255,255,0.7) 50%, /* UR은 광택이 좀 더 쨍하게 */
+        rgba(255,255,255,0.4) 60%, 
+        transparent 100%
+    );
+    background-size: 250% 250%;
+
+    mix-blend-mode: screen;    /* 광택이 더 하얗게 빛나도록 */
+    z-index: 20;               
+    pointer-events: none;
+    
+    /* 무지개 배경과는 살짝 다른 속도로 흐르게 하여 입체감 부여 */
+    animation: softSheen 2.5s linear infinite;
+}
+
+
+/* --- [New 카드 확대 오버레이 (똑같이 화려하게)] --- */
+#vn-new-card-overlay { 
+    display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+    background: rgba(255,255,255,0.85); /* 밝은 배경 */
+    z-index: 120000; flex-direction: column; align-items: center; justify-content: center; 
+    cursor: pointer; pointer-events: auto !important; backdrop-filter: blur(10px); 
+}
+.vn-new-card-content { 
+    position: relative; height: 65vh; aspect-ratio: 2/3; 
+    background: #fff; border-radius: 20px; 
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15); 
+    overflow: hidden; 
+    animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    margin-bottom: 20px; pointer-events: auto !important; 
+    border: 8px solid #fff;
+}
+.vn-new-card-content img { width: 100%; height: 100%; object-fit: cover; }
+.vn-new-text { 
+    position: absolute; top: 5%; 
+    color: #FF758C; font-size: 5em; font-weight: 900; 
+    text-shadow: 3px 3px 0px #fff, 0 0 20px rgba(255, 117, 140, 0.5);
+    animation: pulseText 1s infinite alternate; z-index: 120001; pointer-events: none; 
+}
+.vn-new-card-title { 
+    color: #555; font-size: 2.5em; font-weight: bold; 
+    text-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+    margin-top: 10px; font-family: 'Jua', sans-serif; pointer-events: none; 
+}
+.vn-new-tap-msg { color: #888; font-size: 1.1em; animation: blink 2s infinite; margin-top: 10px; }
+
+@keyframes popIn { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.1); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+
+/* ========================================= */
+/* [긴급 수정] 앨범 카드 확대 보기 (클릭 강제 활성화) */
+/* ========================================= */
+/* [1] 앨범 확대 창 (배경 움직이는 효과 적용) */
+#vn-album-zoom-overlay {
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100vw; height: 100vh;
+    
+    /* ▼▼▼ [수정됨] 훨씬 연하고 부드러운 파스텔 톤으로 변경 ▼▼▼ */
+    /* 순서: 연한 핑크 -> 연한 라벤더 -> 연한 하늘색 -> 화이트블루 */
+    background: linear-gradient(-45deg, #ffecf2, #e0c3fc, #dcf4ff, #e4f5fc);
+    /* ▲▲▲ ------------------------------------------------- ▲▲▲ */
+    background-size: 400% 400%; /* 배경을 4배로 늘려서 움직일 공간 확보 */
+    animation: holoFlowBG 10s ease infinite; /* 10초 동안 부드럽게 무한 반복 */
+    /* ▲▲▲ */
+    
+    z-index: 2147483647 !important;
+    
+    align-items: center; 
+    justify-content: center; 
+    flex-direction: column;
+    
+    pointer-events: auto !important; 
+    
+    cursor: zoom-out; 
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* [2] 움직임을 만드는 엔진 (이 코드가 바로 밑에 꼭 있어야 해요!) */
+@keyframes holoFlowBG {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+#vn-album-zoom-overlay.visible {
+    opacity: 1;
+}
+
+#vn-album-zoom-img {
+    width: 100%; 
+    height: 100%; 
+    object-fit: contain; 
+    
+    /* 이미지를 눌러도 부모(배경)가 눌린 것으로 처리 */
+    pointer-events: none !important; 
+    user-select: none;
+}
+
+.vn-zoom-msg {
+    position: absolute;
+    bottom: 30px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.2em;
+    pointer-events: none !important;
+    font-family: 'Jua', sans-serif;
+    animation: blink 2s infinite;
+}
+
+/* ========================================= */
+/* [추가] 우측 상단 메인 코인 표시기 스타일 */
+/* ========================================= */
+#vn-hud-coin {
+    position: absolute; /* 버튼들과 같은 레벨 */
+    top: 20px;
+    right: 140px; /* Theme 버튼(Top:70)이나 Close(Right:30)와 겹치지 않게 왼쪽으로 밀어둠 */
+    
+    background: rgba(0, 0, 0, 0.5); /* 반투명 검정 배경 */
+    color: #FFD700; /* 금색 글씨 */
+    
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+    font-family: 'Jua', sans-serif;
+    
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    border: 1px solid rgba(255, 215, 0, 0.5); /* 금색 테두리 */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    z-index: 95; /* 설정 버튼들보다 살짝 아래, 하지만 배경보단 위 */
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
+    transition: transform 0.2s;
+}
+
+#vn-hud-coin:hover {
+    transform: scale(1.05);
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* 모바일 화면에서는 위치와 크기 조정 */
+@media (max-width: 900px) {
+    #vn-hud-coin {
+        top: 10px;
+        right: 100px; /* 닫기 버튼 옆 */
+        padding: 5px 12px;
+        font-size: 0.9em;
+    }
+}
+
+/* ========================================= */
+/* [★추가] 가챠 배경 반짝이 효과 (Particle FX) */
+/* ========================================= */
+
+/* 1. 이펙트 컨테이너 (배경 바로 위, 컨텐츠 뒤) */
+#vn-gacha-bg-fx {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    pointer-events: none; /* 클릭 통과 */
+    z-index: 1; /* 배경(0)보다 위, 본문(5)보다 아래 */
+}
+
+/* 2. 개별 반짝이 스타일 */
+.vn-twinkle-star {
+    position: absolute;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
+                0 0 20px rgba(255, 255, 255, 0.4);
+    opacity: 0;
+    animation: twinkleFloat linear infinite;
+}
+
+/* 3. 십자 모양 별 (짝수 번째 요소에 적용하여 다양성 줌) */
+.vn-twinkle-star:nth-child(even) {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    background: #FFF9C4; /* 연한 노랑 */
+}
+
+/* 4. 애니메이션: 떠오르면서 반짝임 */
+@keyframes twinkleFloat {
+    0% {
+        transform: translateY(0) scale(0) rotate(0deg);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1) rotate(45deg);
+    }
+    80% {
+        opacity: 0.8;
+        transform: translateY(-80px) scale(1) rotate(90deg);
+    }
+    100% {
+        transform: translateY(-100px) scale(0) rotate(135deg);
+        opacity: 0;
+    }
+}
+
+
+/* ========================================= */
+/* [최종 수정] 모바일 가챠 UI 통합 패치 (화면 가림 해결됨) */
+/* ========================================= */
+@media (max-width: 900px) {
+
+    /* 1. 가챠 패널 전체 여백 및 정렬 */
+    .vn-gacha-body {
+        padding: 15px !important;
+        justify-content: flex-start !important;
+        overflow-y: auto !important;
+    }
+
+    /* 2. 헤더 (제목 및 코인) */
+    .vn-gacha-header {
+        padding: 15px 20px !important;
+        font-size: 1.1em !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+    .vn-coin-display {
+        padding: 5px 15px !important;
+        font-size: 0.9em !important;
+    }
+
+    /* 3. 안내 메시지 박스 */
+    #vn-gacha-message {
+        width: 90% !important;
+        padding: 15px !important;
+        margin-bottom: 20px !important;
+        font-size: 0.85em !important;
+        line-height: 1.4 !important;
+    }
+
+    /* 4. 소환 버튼 세로 배치 */
+    .vn-gacha-controls {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 15px !important;
+        margin-bottom: 30px !important;
+        align-items: center !important;
+    }
+    .vn-gacha-btn {
+        width: 90% !important;
+        max-width: 300px !important;
+        padding: 15px !important;
+        font-size: 1.2em !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 15px !important;
+    }
+    .vn-gacha-btn span {
+        margin-top: 0 !important;
+        font-size: 0.7em !important;
+    }
+
+    /* 5. 하단 액션 버튼 */
+    .vn-gacha-actions {
+        width: 90% !important;
+        flex-wrap: wrap !important;
+        padding: 15px !important;
+        gap: 8px !important;
+    }
+    .action-btn {
+        flex: 1 1 40% !important;
+        font-size: 0.8em !important;
+        padding: 8px 5px !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+    }
+
+    /* ================================================= */
+    /* [★수정] 6. 결과 화면 (화면 가림 및 잘림 해결 패치) */
+    /* ================================================= */
+    
+    /* 1. 결과 화면 전체 컨테이너 */
+    #vn-gacha-result-area {
+        /* [핵심 1] 배경을 불투명한 파스텔톤으로 변경 (뒤에 버튼 안 비치게) */
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%) !important;
+        
+        /* [핵심 2] Grid 대신 Flex를 사용하여 중앙 정렬 */
+        /* display: flex !important; */  <--- 이 줄을 지우거나 주석 처리하세요.
+        flex-wrap: wrap !important;
+        
+        /* [핵심 3] 내용물이 화면 정중앙에 오도록 설정 (상단 잘림 방지) */
+        align-content: center !important;
+        justify-content: center !important;
+        
+        /* 여백 및 크기 설정 */
+        padding: 20px !important;
+        box-sizing: border-box !important;
+        gap: 15px !important;
+        
+        /* 최상위로 올림 */
+        z-index: 200000 !important;
+        position: fixed !important;
+        top: 0 !important; 
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+    
+    /* 2. 결과 카드 크기 조정 */
+    #vn-gacha-result-area .vn-gacha-card {
+        width: 45% !important;        /* 한 줄에 2개씩 */
+        max-width: 150px !important;  /* 너무 커지지 않게 */
+        aspect-ratio: 2/3 !important;
+        margin: 0 !important;
+        flex-grow: 0 !important;
+    }
+
+    /* 3. '화면을 클릭하여 닫기' 안내 문구 위치 조정 */
+    #vn-gacha-result-area::after {
+        content: "화면을 클릭하여 닫기";
+        position: static !important;  /* 고정 위치 해제 (카드 아래로 자연스럽게 배치) */
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin-top: 30px !important;
+        
+        /* 디자인 다듬기 */
+        background: rgba(0,0,0,0.05) !important;
+        color: #888 !important;
+        padding: 10px !important;
+        border-radius: 20px !important;
+        font-size: 0.9em !important;
+        animation: blink 2s infinite;
+        transform: none !important;
+    }
+
+    /* ================================================= */
+    /* [재수정] 4. 앨범(도감) - 모바일 레이아웃 깨짐 완전 해결 */
+    /* ================================================= */
+    
+    /* 앨범 전체 틀 */
+    #vn-album-area {
+        /* [중요] display: flex !important; <--- 이 줄은 절대 넣지 마세요! (안 꺼짐의 원인) */
+        background: #fff !important;
+        padding-top: 0 !important;
+        height: 100vh !important;
+        flex-direction: column !important;
+    }
+    /* 켜졌을 때만 flex가 되도록 JS가 처리하므로 CSS에서는 display 속성을 뺍니다 */
+
+    /* 앨범 헤더 (제목, 수집률, 닫기 버튼) */
+    .vn-album-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 50 !important;
+        background: rgba(255,255,255,0.98) !important;
+        border-bottom: 1px solid #ddd !important;
+        
+        display: flex !important;
+        justify-content: space-between !important; /* 좌우 끝으로 정렬 */
+        align-items: center !important; /* 세로 중앙 정렬 */
+        
+        /* [★핵심] 절대 줄바꿈 금지 (깨짐 원인 차단) */
+        flex-wrap: nowrap !important; 
+        
+        gap: 5px !important;
+        padding: 10px 15px !important; /* 공간 확보를 위해 패딩 조절 */
+        height: 50px !important;
+        min-height: 50px !important;
+    }
+
+    /* 왼쪽 제목: "캐릭터 도감" */
+    .vn-album-header > span:first-child {
+        /* 글자 크기를 화면에 맞춰 조절 */
+        font-size: 1.1em !important; 
+        font-weight: bold !important;
+        white-space: nowrap !important; /* 글자 줄바꿈 절대 금지 */
+        
+        /* 좁으면 말줄임표(...) 처리해서 레이아웃 보호 */
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        min-width: 0 !important; /* Flexbox 말줄임표 필수 속성 */
+    }
+
+    /* 오른쪽 컨트롤 박스 (수집률 + 닫기 버튼) */
+    .vn-album-header > div {
+        flex-shrink: 0 !important; /* 버튼 뭉치는 절대 찌그러지지 않게 방어 */
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    /* 수집률 글씨 */
+    .vn-album-header > div > span {
+        font-size: 0.8em !important;
+        white-space: nowrap !important;
+        color: #888 !important;
+        margin-right: 2px !important;
+    }
+
+    /* 닫기 버튼 디자인 */
+    .vn-album-close-btn {
+        padding: 0 12px !important;
+        height: 30px !important;
+        font-size: 0.85em !important;
+        
+        /* 글자 겹침 방지 */
+        white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        
+        background: #f1f1f1 !important;
+        border-radius: 15px !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    /* 닫기 버튼 아이콘과 글자 간격 */
+    .vn-album-close-btn i {
+        margin-right: 4px !important;
+    }
+	
+	
+	/* ================================================= */
+    /* [추가] 새 카드 획득 화면(오버레이) 모바일 사이즈 조절 */
+    /* ================================================= */
+
+    /* 1. 상단 "NEW!" 글자 크기 줄임 */
+    .vn-new-text {
+        font-size: 3em !important;   /* 기존 5em -> 3em으로 축소 */
+        top: 3% !important;          /* 위치도 살짝 위로 */
+        text-shadow: 2px 2px 0px #fff, 0 0 10px rgba(255, 117, 140, 0.5) !important;
+    }
+
+    /* 2. 하단 캐릭터 이름 크기 줄임 */
+    .vn-new-card-title {
+        font-size: 1.8em !important; /* 기존 2.5em -> 1.8em으로 축소 */
+        margin-top: 10px !important;
+    }
+
+    /* 3. "화면을 클릭하여 닫기" 안내 문구 */
+    .vn-new-tap-msg {
+        font-size: 0.9em !important;
+        margin-top: 5px !important;
+    }
+
+    /* 4. 카드 안의 등급(UR, SSR) 뱃지 이미지 크기 줄임 */
+    #vn-new-card-rarity-img {
+        width: 100px !important;     /* 기존 200px -> 100px로 대폭 축소 */
+        bottom: 10px !important;     /* 구석으로 위치 조정 */
+        right: 10px !important;
+    }
+    
+    /* 5. 카드 박스 높이 조정 (화면에 꽉 차게) */
+    .vn-new-card-content {
+        height: 55vh !important;     /* 높이를 조금 줄여서 전체적으로 균형 맞춤 */
+        margin-bottom: 10px !important;
+    }
+}
+
+/* [추가] 가챠 카드 우측 하단 등급(글자) 이미지 스타일 */
+.vn-card-rarity-img {
+    position: absolute;  /* 카드 내에서 자유롭게 위치 지정 */
+    bottom: 8px;         /* 아래에서 8px 떨어짐 */
+    right: 8px;          /* 오른쪽에서 8px 떨어짐 */
+    
+    width: 45px;         /* 이미지 크기 (너무 크면 숫자를 줄이세요) */
+    height: auto;        /* 비율 자동 유지 */
+    
+    z-index: 25;         /* 카드 배경이나 효과보다 위에 뜨도록 설정 */
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); /* 글자가 잘 보이게 그림자 추가 */
+    pointer-events: none; /* 마우스 클릭 통과 */
+}
+
+/* 앨범(도감)에서는 조금 더 작게 보이게 조정 (선택 사항) */
+.vn-album-item .vn-card-rarity-img {
+    width: 60px;
+    bottom: 6px;
+    right: 6px;
+}
+
+/* [추가] 확대 화면(New & Album) 우측 하단 등급 이미지 스타일 */
+#vn-new-card-rarity-img, 
+#vn-album-zoom-rarity {
+    position: absolute;
+    bottom: 15px;      /* 바닥에서 15px 띄움 */
+    right: 15px;       /* 오른쪽에서 15px 띄움 */
+    width: 200px;       /* 글자 크기 (너무 크면 줄이세요) */
+    height: auto;
+    z-index: 100;      /* 제일 위에 표시 */
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); /* 그림자 */
+    pointer-events: none;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 앨범 확대 화면에서는 위치를 화면 기준으로 우측 하단에 고정 */
+#vn-album-zoom-rarity {
+    position: fixed; 
+    bottom: 30px; 
+    right: 250px;
+    width: 300px; /* 앨범에서는 좀 더 크게 */
+}
+
+/* [수정] 앨범 확대 시 +모양(✨) 반짝이 효과 */
+.vn-zoom-sparkle {
+    position: absolute;
+    /* 색상: 흰색 베이스에 약간의 금색 그라데이션 */
+    background: radial-gradient(circle, #fff 30%, #FFD700 100%); 
+    
+    /* ▼ 여기가 핵심! 동그라미를 지우고 +모양(4각 별)으로 깎습니다 */
+    /* border-radius: 50%;  <-- 이거 지움 */
+    clip-path: polygon(50% 0%, 61% 35%, 100% 50%, 61% 65%, 50% 100%, 39% 65%, 0% 50%, 39% 35%);
+    
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    /* 무한 반복 애니메이션 유지 */
+    animation: zoomSparkleFloat linear infinite; 
+}
+
+/* 애니메이션은 그대로 둡니다 (회전하면서 올라가면 + 모양이 더 예쁩니다) */
+@keyframes zoomSparkleFloat {
+    0% { transform: translateY(0) scale(0) rotate(0deg); opacity: 0; }
+    20% { opacity: 1; transform: translateY(-20px) scale(1) rotate(45deg); }
+    80% { opacity: 0.8; transform: translateY(-80px) scale(0.8) rotate(90deg); }
+    100% { transform: translateY(-120px) scale(0) rotate(135deg); opacity: 0; }
+}
+
+/* ======================================================= */
+/* [★GOD TIER V3] UR CINEMATIC - HOLOGRAPHIC PASTEL        */
+/* ======================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Montserrat:wght@900&display=swap');
+
+#vn-ur-cutscene {
+    position: fixed; inset: 0; width: 100vw; height: 100vh;
+    z-index: 2147483647; 
+    display: none;
+    /* 배경색이 밝아지므로 기본 배경을 밝은 톤으로 변경 */
+    background: #fff; 
+    overflow: hidden; pointer-events: none;
+    font-family: 'Cinzel', serif;
+}
+
+/* 1. 배경: 하늘색 + 핑크색 홀로그램 그라데이션 (움직임 추가) */
+.ur-void-bg {
+    position: absolute; width: 200%; height: 200%;
+    top: -50%; left: -50%;
+    
+    /* 홀로그램 컬러 팔레트 */
+    background: linear-gradient(
+        135deg, 
+        #a18cd1 0%,   /* 연보라 */
+        #fbc2eb 25%,  /* 핑크 */
+        #8fd3f4 50%,  /* 스카이블루 */
+        #e0c3fc 75%,  /* 라벤더 */
+        #a18cd1 100%  /* 다시 연보라 (반복용) */
+    );
+    background-size: 200% 200%;
+    
+    /* 부드럽게 흐르는 배경 애니메이션 */
+    animation: holoFlow 8s ease infinite;
+    z-index: 1;
+}
+
+/* 배경 위에 깔리는 오로라 쉬머 효과 */
+.ur-void-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.4) 0%, transparent 60%);
+    mix-blend-mode: overlay;
+    animation: pulseLight 3s infinite alternate;
+}
+
+/* 2. 입자: 다이아몬드 가루처럼 반짝이는 효과 */
+.ur-star-field {
+    position: absolute; left: 50%; top: 50%;
+    width: 2px; height: 2px;
+    /* 입자 색상을 흰색과 금색으로 변경 */
+    box-shadow: 
+        0 0 4px #fff, 
+        -100px -150px 2px #fff, 
+        120px 200px 3px #ffd700,
+        -200px 100px 2px #00ffff,
+        200px -200px 3px #ff00ff;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    animation: galaxyExplode 3s ease-in forwards;
+}
+
+/* 3. 마법진: 화이트 골드 & 크리스탈 느낌 */
+.ur-magic-circle {
+    position: absolute; top: 50%; left: 50%;
+    width: 80vmin; height: 80vmin;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 3;
+    opacity: 0.9;
+}
+
+/* 외곽 링: 흰색 + 핑크빛 광채 */
+.ur-circle-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 
+        0 0 20px rgba(255, 255, 255, 0.8), 
+        0 0 40px rgba(255, 105, 180, 0.4), /* 핑크 글로우 */
+        inset 0 0 20px rgba(0, 255, 255, 0.4); /* 블루 글로우 */
+    animation: spinRight 10s linear infinite;
+}
+/* 내부: 다이아몬드 느낌 */
+.ur-circle-inner {
+    position: absolute; inset: 15%; border-radius: 50%;
+    border: 4px dashed rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 0 10px #00ffff);
+    animation: spinLeft 5s linear infinite;
+}
+/* 중앙 빛 */
+.ur-circle-core {
+    position: absolute; inset: 40%; border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #ffc0cb 50%, transparent 70%);
+    animation: pulseCore 1s infinite alternate;
+}
+
+/* 4. 빛기둥: 무지개빛(Prismatic) 폭발 */
+.ur-holy-rays {
+    position: absolute; top: 50%; left: 50%;
+    width: 200vmax; height: 200vmax;
+    transform: translate(-50%, -50%) scale(0);
+    /* 핑크-블루-화이트 교차 */
+    background: conic-gradient(
+        from 0deg, 
+        transparent 0%, 
+        rgba(255, 255, 255, 0.9) 5%, 
+        transparent 10%, 
+        rgba(0, 255, 255, 0.5) 25%, /* 시안 */
+        transparent 45%, 
+        rgba(255, 105, 180, 0.5) 50%, /* 핫핑크 */
+        transparent 55%
+    );
+    z-index: 4;
+    mix-blend-mode: overlay; /* 배경과 예쁘게 섞이도록 */
+    animation: raySpinBurst 3.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+/* 5. 텍스트 컨테이너 */
+.ur-text-container {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(5);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10;
+    opacity: 0;
+    animation: textSlamUltra 3.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+/* 메인 텍스트: 크리스탈/실버 느낌으로 변경 (배경이 화려하므로 글자는 깔끔하게) */
+.ur-main-text {
+    font-size: 7rem; font-weight: 900; font-style: italic;
+    color: transparent; line-height: 1;
+    
+    /* 실버 & 화이트 그라데이션 */
+    background: linear-gradient(180deg, #ffffff 20%, #e0e0e0 45%, #ffffff 50%, #b0b0b0 80%);
+    -webkit-background-clip: text; background-clip: text;
+    
+    /* 진한 핑크/보라 그림자로 가독성 확보 */
+    filter: drop-shadow(0 0 2px rgba(255,255,255,1)) 
+            drop-shadow(2px 4px 0px rgba(186, 85, 211, 0.5));
+    
+    position: relative; letter-spacing: -5px;
+}
+
+/* 텍스트 위를 지나가는 무지개 빛 */
+.ur-main-text::after {
+    content: attr(data-text);
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.95) 50%, transparent 70%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    background-size: 200% 100%;
+    animation: textShineSweep 2s infinite linear;
+    mix-blend-mode: screen;
+}
+
+.ur-sub-text {
+    margin-top: 20px; font-size: 1.5rem; font-family: 'Montserrat', sans-serif;
+    letter-spacing: 12px; color: #555; /* 배경이 밝아서 글자는 약간 어둡게 */
+    text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+    font-weight: bold;
+    opacity: 0;
+    animation: subFadeIn 3.5s ease forwards;
+}
+
+/* 6. 충격파: 오로라 링 */
+.ur-shockwave-prism {
+    position: absolute; top: 50%; left: 50%;
+    width: 0; height: 0;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    /* 핑크 & 스카이블루 링 */
+    box-shadow: 
+        0 0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 0 50px rgba(135, 206, 235, 0.4), /* 하늘색 */
+        0 0 0 80px rgba(255, 182, 193, 0.4); /* 핑크색 */
+    z-index: 5;
+    opacity: 0;
+    animation: shockwavePrism 3.5s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+/* 7. 최종 플래시 (눈부심) */
+.ur-final-flash {
+    position: absolute; inset: 0; background: white;
+    z-index: 100; opacity: 0;
+    animation: flashBang 3.5s linear forwards;
+}
+
+
+/* --- [ANIMATIONS] --- */
+
+/* 배경 흐름 애니메이션 */
+@keyframes holoFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseLight {
+    from { opacity: 0.5; } to { opacity: 1; }
+}
+
+@keyframes galaxyExplode {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    40% { transform: translate(-50%, -50%) scale(50); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(100); opacity: 0; }
+}
+
+@keyframes spinRight { 100% { transform: rotate(360deg); } }
+@keyframes spinLeft { 100% { transform: rotate(-360deg); } }
+@keyframes pulseCore { 0% { transform: scale(0.9); } 100% { transform: scale(1.2); } }
+
+@keyframes raySpinBurst {
+    0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 0; }
+    30% { opacity: 1; }
+    40% { transform: translate(-50%, -50%) scale(1.5) rotate(180deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(2) rotate(360deg); opacity: 0; }
+}
+
+@keyframes textSlamUltra {
+    0% { transform: translate(-50%, -50%) scale(10); opacity: 0; filter: blur(20px); }
+    35% { transform: translate(-50%, -50%) scale(10); opacity: 1; filter: blur(10px); }
+    38% { transform: translate(-50%, -50%) scale(0.9); opacity: 1; filter: blur(0px); }
+    42% { transform: translate(-50%, -50%) scale(1.05); }
+    45% { transform: translate(-50%, -50%) scale(1); }
+    85% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+}
+
+@keyframes textShineSweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+@keyframes shockwavePrism {
+    0%, 37% { width: 0; height: 0; opacity: 0; border-width: 50px; }
+    38% { opacity: 1; }
+    60% { width: 200vmax; height: 200vmax; opacity: 0; border-width: 0; }
+    100% { opacity: 0; }
+}
+
+@keyframes subFadeIn {
+    0%, 45% { opacity: 0; transform: translateY(20px); }
+    55% { opacity: 1; transform: translateY(0); }
+    85% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@keyframes flashBang {
+    0%, 35% { opacity: 0; }
+    38% { opacity: 1; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .ur-main-text { font-size: 3.5rem; letter-spacing: -2px; }
+    .ur-sub-text { font-size: 0.9rem; letter-spacing: 5px; }
 }
